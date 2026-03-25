@@ -42,8 +42,8 @@ nav a:hover{color:rgba(240,208,128,.9)}
 #lfill{height:100%;width:0%;background:linear-gradient(to right,#8B6010,#F0D080,#C9A84C);box-shadow:0 0 8px #C9A84C;transition:width .06s linear}
 </style>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js" defer></script>
 </head>
 <body>
 <div id="cur"></div><div id="cur2"></div>
@@ -237,13 +237,19 @@ function makePhy(o){
 
 // ── GEOMETRY BUILDERS ──
 function mkFlanGeo(){
-  const p=[
-    new THREE.Vector2(0,-0.62),new THREE.Vector2(1.27,-0.62),
-    new THREE.Vector2(1.37,-0.52),new THREE.Vector2(1.31,0.08),
-    new THREE.Vector2(1.18,0.52),new THREE.Vector2(0.78,0.74),
-    new THREE.Vector2(0,0.78)
+  const p = [
+    new THREE.Vector2(0, -0.55),   // bottom center
+    new THREE.Vector2(1.45, -0.55),// flatter base edge
+    new THREE.Vector2(1.55, -0.35),// sharper wall start
+    new THREE.Vector2(1.50, 0.15), // straighter side
+    new THREE.Vector2(1.35, 0.55), // slight inward curve
+    new THREE.Vector2(1.05, 0.72), // top rounding
+    new THREE.Vector2(0, 0.75)     // top center
   ];
-  return new THREE.LatheGeometry(p,80);
+
+  const geo = new THREE.LatheGeometry(p, 100);
+
+  return geo;
 }
 function mkPoolGeo(){
   const g=new THREE.CylinderGeometry(1.15,1.15,0.11,80,3);
