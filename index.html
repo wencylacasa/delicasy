@@ -2,18 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>LechePlan — Silky. Rich. Irresistible.</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap');
 
 :root {
   --gold:#F0D080; --gold-dim:rgba(240,208,128,0.26); --gold-glow:rgba(201,168,76,0.7);
-  --bg:#060402; --cream:rgba(245,236,215,0.52); --cream-dim:rgba(245,236,215,0.2);
+  --bg:#060402; --cream:rgba(245,236,215,0.52);
 }
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Cormorant Garamond',serif}
-#webgl{position:fixed;inset:0;display:block;z-index:1}
+*{margin:0;padding:0;box-sizing:border-box; user-select:none;}
+html,body{width:100%;height:100%;overflow:hhidden;background:var(--bg);font-family:'Cormorant Garamond',serif}
+canvas#webgl{position:fixed;inset:0;display:block;z-index:1}
 #vig{position:fixed;inset:0;z-index:8;pointer-events:none;
   background:radial-gradient(ellipse 78% 68% at 50% 52%,transparent 28%,rgba(6,4,2,0.48) 65%,rgba(6,4,2,0.95) 100%)}
 
@@ -161,447 +161,431 @@ nav a:hover{color:rgba(240,208,128,0.82)}
 </div>
 
 <script>
-// ══════════════════════════════════════
-// DATA
-// ══════════════════════════════════════
-const DS=[
-  {name:'Classic Leche Flan',desc:'Slow-steamed for 3 hours. Velvety egg custard crowned with molten amber caramel — our signature since 1987.',price:'₱ 285 · 500g Llanera',type:'flan',bodyColor:0xD4A030,syrupColor:0x5C1800,glowColor:0xFFCC44},
-  {name:'Ube Custard',desc:'Vibrant purple yam from the Cordilleras, whipped into a silky cloud of deep floral sweetness.',price:'₱ 295 · 500g Llanera',type:'ube',bodyColor:0x6A32A8,syrupColor:0x280860,glowColor:0xBB88FF},
-  {name:'Ube Leche Flan',desc:'The best of both worlds — rich purple ube beneath golden caramel custard, a Filipino masterpiece.',price:'₱ 320 · 500g Llanera',type:'ubeflan',bodyColor:0x7A38A8,syrupColor:0x7A2C00,glowColor:0xCC99FF},
-  {name:'Mango Graham Float',desc:'Sun-ripened Philippine carabao mangoes, crushed graham, and cloud cream — layered tropical perfection.',price:'₱ 265 · 500g Tray',type:'graham',bodyColor:0xE8B810,syrupColor:0xB46000,glowColor:0xFFDD44},
-  {name:'Mango de Leche',desc:'Golden custard kissed by carabao mango — sweet, tropical, unmistakably Filipino.',price:'₱ 275 · 500g Llanera',type:'mango',bodyColor:0xE09020,syrupColor:0x904800,glowColor:0xFFBB33},
-  {name:'Black Forest',desc:'Dark Benguet chocolate layers, kirsch-soaked cherries, and hand-piped Chantilly cream.',price:'₱ 340 · 500g Tray',type:'blackforest',bodyColor:0x120402,syrupColor:0x060200,glowColor:0x553322}
+// ============================================================
+// FIXED: FULLY VISIBLE MODELS WITH REALISTIC MATERIALS
+// ============================================================
+const DS = [
+  {name:'Classic Leche Flan',desc:'Slow-steamed for 3 hours. Velvety egg custard crowned with molten amber caramel.',price:'₱ 285 · 500g Llanera',type:'flan',bodyColor:0xDAA520,caramelColor:0x8B3A1A,glowColor:0xFFCC66},
+  {name:'Ube Custard',desc:'Vibrant purple yam whipped into silky cloud of deep floral sweetness.',price:'₱ 295 · 500g Llanera',type:'ube',bodyColor:0x9B4DFF,caramelColor:0x4A1A6E,glowColor:0xCC88FF},
+  {name:'Ube Leche Flan',desc:'Rich purple ube beneath golden caramel custard — a Filipino masterpiece.',price:'₱ 320 · 500g Llanera',type:'ubeflan',bodyColor:0xAA66FF,caramelColor:0x9B3A1A,glowColor:0xDDAAFF},
+  {name:'Mango Graham',desc:'Sun-ripened carabao mangoes, crushed graham, and cloud cream — tropical perfection.',price:'₱ 265 · 500g Tray',type:'graham',bodyColor:0xFDBC40,caramelColor:0xC97A1A,glowColor:0xFFDD77},
+  {name:'Mango de Leche',desc:'Golden custard kissed by carabao mango — sweet, tropical, unmistakably Filipino.',price:'₱ 275 · 500g Llanera',type:'mango',bodyColor:0xEEAA44,caramelColor:0xB55A1A,glowColor:0xFFCC66},
+  {name:'Black Forest',desc:'Dark Benguet chocolate layers, kirsch-soaked cherries, and Chantilly cream.',price:'₱ 340 · 500g Tray',type:'blackforest',bodyColor:0x3A2018,caramelColor:0x281008,glowColor:0xAA6644}
 ];
 
-// ══════════════════════════════════════
-// INPUT
-// ══════════════════════════════════════
-let mouseNormX=0,mouseNormY=0,smoothMX=0,smoothMY=0,useGyro=false;
-document.addEventListener('mousemove',e=>{mouseNormX=(e.clientX/innerWidth)*2-1;mouseNormY=-(e.clientY/innerHeight)*2+1;});
-function setupGyro(){window.addEventListener('deviceorientation',e=>{if(e.beta===null||e.gamma===null)return;useGyro=true;mouseNormX=Math.max(-1,Math.min(1,e.gamma/38));mouseNormY=Math.max(-1,Math.min(1,-(e.beta-30)/45));},true);}
-if(typeof DeviceOrientationEvent!=='undefined'){if(typeof DeviceOrientationEvent.requestPermission==='function'){document.addEventListener('touchstart',function h(){DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')setupGyro();}).catch(()=>{});document.removeEventListener('touchstart',h);},{once:true});}else{setupGyro();}}
-let tSX=0,tSY=0;
-document.addEventListener('touchstart',e=>{tSX=e.touches[0].clientX;tSY=e.touches[0].clientY;},{passive:true});
-document.addEventListener('touchmove',e=>{if(useGyro)return;mouseNormX=Math.max(-1,Math.min(1,(e.touches[0].clientX-tSX)/130));mouseNormY=Math.max(-1,Math.min(1,-(e.touches[0].clientY-tSY)/130));},{passive:true});
-document.addEventListener('touchend',()=>{if(!useGyro){mouseNormX*=.28;mouseNormY*=.28;}},{passive:true});
+// -------- FAST INPUT --------
+let mouseNormX=0, mouseNormY=0, smoothMX=0, smoothMY=0;
+document.addEventListener('mousemove',e=>{ mouseNormX = (e.clientX/innerWidth)*2-1; mouseNormY = -(e.clientY/innerHeight)*2+1; });
+let touchStartX=0;
+document.addEventListener('touchstart',e=>{ touchStartX=e.touches[0].clientX; },{passive:true});
+document.addEventListener('touchmove',e=>{ mouseNormX = Math.max(-1,Math.min(1,(e.touches[0].clientX-touchStartX)/100)); mouseNormY = Math.max(-1,Math.min(1,-(e.touches[0].clientY-200)/130)); },{passive:true});
 
-// ══════════════════════════════════════
-// LOADING PROGRESS
-// ══════════════════════════════════════
-let prog=0;
-const lfill=document.getElementById('lfill');
-const li=setInterval(()=>{prog+=Math.random()*3.6+2.4;if(prog>=100){prog=100;clearInterval(li);}lfill.style.width=prog+'%';},40);
-
-// ══════════════════════════════════════
-// THREE CORE
-// ══════════════════════════════════════
+// -------- THREE.JS CORE --------
 const canvas=document.getElementById('webgl');
 const scene=new THREE.Scene();
-scene.fog=new THREE.FogExp2(0x060402,.030);
-const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,120);
-camera.position.set(0,3.6,13.5);
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+scene.background=new THREE.Color(0x060402);
+scene.fog=new THREE.FogExp2(0x060402,0.022);
+const camera=new THREE.PerspectiveCamera(34, innerWidth/innerHeight, 0.3, 40);
+camera.position.set(0, 2.8, 12.5);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});
 renderer.setSize(innerWidth,innerHeight);
-// OPTIMIZATION: Capped pixel ratio at 1.5 to save massive rendering overhead on mobile
-renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.38;
-renderer.physicallyCorrectLights=true;
+renderer.toneMappingExposure=1.5;
 
-// ══════════════════════════════════════
-// PROCEDURAL HDR ENVIRONMENT
-// ══════════════════════════════════════
-(function buildEnv(){
-  const es=new THREE.Scene();
-  // Dome
-  const dc=document.createElement('canvas');dc.width=256;dc.height=256; // Reduced resolution
-  const dctx=dc.getContext('2d');
-  const gr=dctx.createRadialGradient(128,90,5,128,128,200);
-  gr.addColorStop(0,'#fff9e8');gr.addColorStop(.3,'#d4a850');gr.addColorStop(.65,'#3d2810');gr.addColorStop(1,'#080402');
-  dctx.fillStyle=gr;dctx.fillRect(0,0,256,256);
-  const bgMat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(dc),side:THREE.BackSide});
-  es.add(new THREE.Mesh(new THREE.SphereGeometry(38,16,8),bgMat));
-  // Softboxes
-  [[10,12,-4,0xfffde8],[- 10,6,7,0xd0e0ff],[0,5,-14,0xffcc88],[5,-2,8,0xff8830]].forEach(([x,y,z,c])=>{
-    const m=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshBasicMaterial({color:c}));
-    m.position.set(x,y,z);m.lookAt(0,0,0);es.add(m);
+// -------- LIGHTS (enhanced for realism) --------
+const mainLight = new THREE.DirectionalLight(0xFFF2E0, 1.3);
+mainLight.position.set(5, 8, 4);
+mainLight.castShadow=true;
+mainLight.shadow.mapSize.width=1024;
+mainLight.shadow.mapSize.height=1024;
+mainLight.shadow.camera.near=0.5;
+mainLight.shadow.camera.far=18;
+mainLight.shadow.camera.left=-5; mainLight.shadow.camera.right=5;
+mainLight.shadow.camera.top=5; mainLight.shadow.camera.bottom=-5;
+mainLight.shadow.radius=2.0;
+scene.add(mainLight);
+
+const fillLight = new THREE.PointLight(0xCCAA77, 0.85);
+fillLight.position.set(-3, 2.5, 4.5);
+scene.add(fillLight);
+
+const rimLight = new THREE.PointLight(0xFFAA66, 0.95);
+rimLight.position.set(-4, 3.2, -5);
+scene.add(rimLight);
+
+const backLight = new THREE.PointLight(0xFFCC88, 0.6);
+backLight.position.set(0, 2.5, -7);
+scene.add(backLight);
+
+const ambient = new THREE.AmbientLight(0xFFEECC, 0.55);
+scene.add(ambient);
+
+// Ground reflection helper
+const groundPlane = new THREE.Mesh(new THREE.PlaneGeometry(20,20), new THREE.MeshStandardMaterial({color:0x1A1208, roughness:0.7, metalness:0.1, transparent:true, opacity:0.25}));
+groundPlane.rotation.x = -Math.PI/2;
+groundPlane.position.y = -0.75;
+groundPlane.receiveShadow = true;
+scene.add(groundPlane);
+
+// -------- HELPER: Create realistic custard material --------
+function makeCustardMaterial(color, roughnessVal=0.28, sheenVal=0.3) {
+  return new THREE.MeshPhysicalMaterial({
+    color: color,
+    roughness: roughnessVal,
+    metalness: 0.02,
+    clearcoat: 0.72,
+    clearcoatRoughness: 0.18,
+    emissive: 0x331100,
+    emissiveIntensity: 0.05,
+    sheen: sheenVal,
+    sheenColor: 0xFFEEAA,
+    sheenRoughness: 0.4
   });
-  const pmrem=new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
-  scene.environment=pmrem.fromScene(es).texture;
-  pmrem.dispose();
-})();
+}
 
-// ══════════════════════════════════════
-// LIGHTS
-// ══════════════════════════════════════
-scene.add(new THREE.AmbientLight(0xfff8ee,.62));
-const keyLight=new THREE.SpotLight(0xfffcf0,9,0,Math.PI/4.2,.38,1.1);
-keyLight.position.set(4,12,5);keyLight.castShadow=true;
-// OPTIMIZATION: Lowered shadow map resolution from 2048 to 1024
-keyLight.shadow.mapSize.width=keyLight.shadow.mapSize.height=1024;
-keyLight.shadow.camera.near=.5;keyLight.shadow.camera.far=42;
-keyLight.shadow.bias=-.0002;keyLight.shadow.radius=3.5;
-scene.add(keyLight);scene.add(keyLight.target);
-const rimLight=new THREE.SpotLight(0xffd888,5.5,0,Math.PI/2.8,.65,1.6);
-rimLight.position.set(-7,8,-8);scene.add(rimLight);
-const fillLight=new THREE.DirectionalLight(0xc8d8ff,1.4);
-fillLight.position.set(-9,3,6);scene.add(fillLight);
-const bounceLight=new THREE.PointLight(0xffa550,2.6,14,2);
-bounceLight.position.set(0,-.4,3);scene.add(bounceLight);
-
-// ══════════════════════════════════════
-// TEXTURES (Optimized loops to prevent UI freezing)
-// ══════════════════════════════════════
-function makeBumpCanvas(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);return new THREE.CanvasTexture(c);}
-
-const flanBump=makeBumpCanvas(256,256,(ctx,w,h)=>{
-  ctx.fillStyle='#808080';ctx.fillRect(0,0,w,h);
-  for(let i=0;i<10000;i++){const g=128+Math.round((Math.random()-.5)*30);ctx.fillStyle=`rgb(${g},${g},${g})`;ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*.9,0,7);ctx.fill();}
-  for(let j=0;j<30;j++){const y=Math.random()*h;ctx.strokeStyle=`rgba(148,148,148,.16)`;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y+(Math.random()*4-2));ctx.stroke();}
-});
-flanBump.wrapS=flanBump.wrapT=THREE.RepeatWrapping;flanBump.repeat.set(4,4);
-
-const caramelNorm=makeBumpCanvas(128,128,(ctx,w,h)=>{
-  ctx.fillStyle='#7f7fff';ctx.fillRect(0,0,w,h);
-  for(let i=0;i<2000;i++){const r=120+Math.round(Math.random()*28),g2=120+Math.round(Math.random()*28);ctx.fillStyle=`rgb(${r},${g2},255)`;ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*2.2,0,7);ctx.fill();}
-});
-caramelNorm.wrapS=caramelNorm.wrapT=THREE.RepeatWrapping;caramelNorm.repeat.set(2,2);
-
-const metalBump=makeBumpCanvas(256,256,(ctx,w,h)=>{
-  ctx.fillStyle='#808080';ctx.fillRect(0,0,w,h);
-  for(let i=0;i<4000;i++){ctx.fillStyle='#8a8a8a';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*28+4,.8);}
-  for(let i=0;i<1000;i++){ctx.fillStyle='#797979';ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*1.2,0,7);ctx.fill();}
-});
-metalBump.wrapS=metalBump.wrapT=THREE.RepeatWrapping;metalBump.repeat.set(2,2);
-
-// ══════════════════════════════════════
-// PBR MATERIAL HELPER
-// ══════════════════════════════════════
-function makePhy(o){
-  const m=new THREE.MeshPhysicalMaterial({
-    color:o.color!=null?o.color:0xffffff,
-    roughness:o.roughness!=null?o.roughness:.5,
-    metalness:o.metalness!=null?o.metalness:0,
-    clearcoat:o.clearcoat!=null?o.clearcoat:0,
-    clearcoatRoughness:o.clearcoatRoughness!=null?o.clearcoatRoughness:.08,
-    transparent:!!(o.transparent||(o.opacity!=null&&o.opacity<1)),
-    opacity:o.opacity!=null?o.opacity:1,
-    side:o.side!=null?o.side:THREE.FrontSide,
-    depthWrite:o.depthWrite!=null?o.depthWrite:true,
-    bumpMap:o.bumpMap||null,bumpScale:o.bumpScale!=null?o.bumpScale:.01,
-    normalMap:o.normalMap||null,
-    normalScale:o.normalScale?new THREE.Vector2(o.normalScale,o.normalScale):new THREE.Vector2(1,1),
-    envMapIntensity:o.envMapIntensity!=null?o.envMapIntensity:1.0
+function makeCaramelMaterial(color) {
+  return new THREE.MeshPhysicalMaterial({
+    color: color,
+    roughness: 0.12,
+    metalness: 0.05,
+    clearcoat: 0.95,
+    clearcoatRoughness: 0.08,
+    emissive: 0x441100,
+    emissiveIntensity: 0.03
   });
-  if(o.transmission!=null){m.transmission=o.transmission;m.transparent=true;}
-  if(o.ior!=null)m.ior=o.ior;
-  if(o.thickness!=null&&'thickness' in m)m.thickness=o.thickness;
-  if(o.sheen!=null){m.sheen=o.sheen;if(o.sheenColor!=null&&m.sheenColor)m.sheenColor.set(o.sheenColor);if(o.sheenRoughness!=null)m.sheenRoughness=o.sheenRoughness;}
-  return m;
 }
 
-// ══════════════════════════════════════
-// OVAL FLAN GEOMETRY (llanera mold)
-// OPTIMIZATION: Dropped segments from 128 to 48 for mobile performance
-// ══════════════════════════════════════
-const OVAL_Z=1.62; 
-const LATHE_SEGMENTS = 48;
+function makeMetalMaterial() {
+  return new THREE.MeshPhysicalMaterial({
+    color: 0xD8D0C0,
+    roughness: 0.28,
+    metalness: 0.85,
+    clearcoat: 0.7,
+    clearcoatRoughness: 0.2,
+    envMapIntensity: 1.3
+  });
+}
 
-function mkLlaneraGeo(){
-  const pts=[
-    new THREE.Vector2(0,    -.14),new THREE.Vector2(.55,  -.14),
-    new THREE.Vector2(1.10, -.13),new THREE.Vector2(1.62, -.10),
-    new THREE.Vector2(1.90,  .02),new THREE.Vector2(2.02,  .18),
-    new THREE.Vector2(2.06,  .38),new THREE.Vector2(2.10,  .52),
-    new THREE.Vector2(2.28,  .55),new THREE.Vector2(2.38,  .52),
-    new THREE.Vector2(2.42,  .44),new THREE.Vector2(2.40,  .36)
-  ];
-  const g=new THREE.LatheGeometry(pts,LATHE_SEGMENTS);
-  g.scale(1,1,OVAL_Z);return g;
+// -------- GEOMETRIES (simplified but visually appealing) --------
+// Llanera mold (oval tin)
+function createLlanera() {
+  const shape = new THREE.Shape();
+  shape.absellipse(0, 0, 2.0, 1.6);
+  const extrudeSettings = { steps: 1, depth: 0.28, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.06, bevelSegments: 8 };
+  const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  geometry.rotateX(-Math.PI/2);
+  geometry.computeVertexNormals();
+  geometry.scale(0.85, 0.85, 0.9);
+  return geometry;
 }
-function mkFlanBodyGeo(){
-  const pts=[
-    new THREE.Vector2(0,    -.12),new THREE.Vector2(.5,   -.12),
-    new THREE.Vector2(1.05, -.11),new THREE.Vector2(1.55, -.08),
-    new THREE.Vector2(1.82,  .04),new THREE.Vector2(1.96,  .22),
-    new THREE.Vector2(2.00,  .44),new THREE.Vector2(1.88,  .48),
-    new THREE.Vector2(1.40,  .54),new THREE.Vector2(.80,   .60),
-    new THREE.Vector2(0,     .62)
-  ];
-  const g=new THREE.LatheGeometry(pts,LATHE_SEGMENTS);
-  g.scale(1,1,OVAL_Z);return g;
-}
-function mkCaramelTopGeo(){
-  const pts=[
-    new THREE.Vector2(0,    .62),new THREE.Vector2(.3,   .616),
-    new THREE.Vector2(.7,   .60),new THREE.Vector2(1.10, .585),
-    new THREE.Vector2(1.45, .565),new THREE.Vector2(1.70, .546),
-    new THREE.Vector2(1.85, .522),new THREE.Vector2(1.92, .506)
-  ];
-  const g=new THREE.LatheGeometry(pts,LATHE_SEGMENTS);
-  g.scale(1,1,OVAL_Z);
-  const pos=g.attributes.position;
-  for(let i=0;i<pos.count;i++){
-    const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);
-    const r=Math.sqrt(vx*vx+(vz/OVAL_Z)*(vz/OVAL_Z));
-    const a=Math.atan2(vz/OVAL_Z,vx);
-    if(r>.2&&vy>.4)pos.setY(i,vy+Math.sin(a*9+r*4)*.006+Math.cos(a*6-r*5)*.004);
+
+function createFlanBody() {
+  const points = [];
+  for (let i = 0; i <= 40; i++) {
+    const t = i / 40;
+    const x = 1.9 * Math.sin(t * Math.PI);
+    const y = 0.72 * (1 - Math.cos(t * Math.PI)) + 0.05;
+    points.push(new THREE.Vector2(x, y));
   }
-  g.computeVertexNormals();return g;
-}
-function mkDripGeo(len,wid){
-  const pts=[
-    new THREE.Vector2(0,0),new THREE.Vector2(wid*.5,.05),
-    new THREE.Vector2(wid,0),new THREE.Vector2(wid*.9,-len*.3),
-    new THREE.Vector2(wid*.65,-len*.7),new THREE.Vector2(wid*.25,-len),
-    new THREE.Vector2(0,-len)
-  ];
-  return new THREE.LatheGeometry(pts,12);
+  const geometry = new THREE.LatheGeometry(points, 48);
+  geometry.scale(0.98, 0.98, 1.58);
+  return geometry;
 }
 
-// Serving plate profile
-function mkPlate(){
-  const pts=[
-    new THREE.Vector2(0,-.07),new THREE.Vector2(.8,-.07),
-    new THREE.Vector2(1.8,-.07),new THREE.Vector2(2.6,-.05),
-    new THREE.Vector2(3.05,.02),new THREE.Vector2(3.20,.14),
-    new THREE.Vector2(3.22,.32),new THREE.Vector2(3.12,.48),
-    new THREE.Vector2(2.92,.54)
-  ];
-  return new THREE.LatheGeometry(pts,LATHE_SEGMENTS);
+function createCaramelTop() {
+  const points = [];
+  for (let i = 0; i <= 30; i++) {
+    const t = i / 30;
+    const x = 1.85 * Math.sin(t * Math.PI);
+    const y = 0.74 - t * 0.08;
+    points.push(new THREE.Vector2(x, y));
+  }
+  const geometry = new THREE.LatheGeometry(points, 48);
+  geometry.scale(0.96, 0.96, 1.58);
+  return geometry;
 }
 
-function mkCyl(r,h,mat,y){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,LATHE_SEGMENTS),mat);
-  m.scale.set(1,1,OVAL_Z);m.position.y=y+h/2;m.castShadow=true;m.receiveShadow=true;return m;
+function createDrip(angle, lengthScale=1) {
+  const dripGeo = new THREE.ConeGeometry(0.065, 0.28 * lengthScale, 8);
+  const drip = new THREE.Mesh(dripGeo, makeCaramelMaterial(0x8B4A1A));
+  const radius = 1.92;
+  const x = Math.cos(angle) * radius;
+  const z = Math.sin(angle) * radius * 1.58;
+  drip.position.set(x, 0.72, z);
+  drip.rotation.z = angle * 0.6;
+  return drip;
 }
 
-// ══════════════════════════════════════
-// OPTIMIZATION: CACHED GEOMETRIES
-// Generating these once instead of duplicating them 6 times!
-// ══════════════════════════════════════
-const sharedLlaneraGeo = mkLlaneraGeo();
-const sharedPlateGeo = mkPlate();
-const sharedFlanGeo = mkFlanBodyGeo();
-const sharedTopGeo = mkCaramelTopGeo();
-const sharedWellGeo = new THREE.CylinderGeometry(2.42*.8,2.42*.8,.03,LATHE_SEGMENTS);
-const sharedShadowGeo = new THREE.CircleGeometry(2.8,48);
-sharedShadowGeo.scale(1,1,1.62);
+function createPlate() {
+  const shape = new THREE.Shape();
+  shape.absellipse(0, 0, 2.8, 2.4);
+  const extrudeSettings = { steps: 1, depth: 0.12, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.04, bevelSegments: 8 };
+  const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+  geometry.rotateX(-Math.PI/2);
+  geometry.computeVertexNormals();
+  return geometry;
+}
 
-// ══════════════════════════════════════
-// SHARED MATERIALS
-// ══════════════════════════════════════
-const llaneraMat=makePhy({color:0xDDDDD0,roughness:.26,metalness:.84,clearcoat:.5,clearcoatRoughness:.18,bumpMap:metalBump,bumpScale:.003,envMapIntensity:1.7});
-const plateMat=makePhy({color:0xF8F4EE,roughness:.16,metalness:0,clearcoat:.92,clearcoatRoughness:.05,envMapIntensity:1.3});
-const wellMat=makePhy({color:0xEEE4CC,roughness:.22,clearcoat:.62,clearcoatRoughness:.10,transparent:true,opacity:.48,depthWrite:false});
-const shadowMat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.52,depthWrite:false});
+// -------- BUILD ALL MODELS --------
+const groups = [];
+const plateMat = new THREE.MeshPhysicalMaterial({ color: 0xF8F0E0, roughness: 0.18, metalness: 0, clearcoat: 0.92, clearcoatRoughness: 0.1 });
 
-// ══════════════════════════════════════
-// TABLE
-// ══════════════════════════════════════
-const table=new THREE.Mesh(new THREE.PlaneGeometry(120,60),makePhy({color:0x080402,roughness:.16,metalness:.03,clearcoat:.88,clearcoatRoughness:.07,envMapIntensity:.9}));
-table.rotation.x=-Math.PI/2;table.position.y=-.72;table.receiveShadow=true;scene.add(table);
-
-// ══════════════════════════════════════
-// BUILD GROUPS
-// ══════════════════════════════════════
-const groups=[];
-
-DS.forEach((d,i)=>{
-  const G=new THREE.Group();
-  G.position.x=i*8.0;
-
-  // Shadow
-  const sd=new THREE.Mesh(sharedShadowGeo, shadowMat);
-  sd.rotation.x=-Math.PI/2;sd.position.y=-.715;G.add(sd);
-
+DS.forEach((d, idx) => {
+  const group = new THREE.Group();
+  group.position.x = idx * 8.2;
+  
+  // Shadow catcher
+  const shadowDisc = new THREE.Mesh(new THREE.CircleGeometry(2.5, 16), new THREE.MeshStandardMaterial({ color: 0x000000, transparent: true, opacity: 0.45, roughness: 1 }));
+  shadowDisc.rotation.x = -Math.PI/2;
+  shadowDisc.position.y = -0.72;
+  group.add(shadowDisc);
+  
   // Serving plate
-  const plate=new THREE.Mesh(sharedPlateGeo,plateMat);
-  plate.position.y=-.72;plate.scale.setScalar(.8);plate.castShadow=true;plate.receiveShadow=true;
-  G.add(plate);
-
-  // Plate inner tint
-  const well=new THREE.Mesh(sharedWellGeo,wellMat);
-  well.position.y=-.70;G.add(well);
-
-  const FG=new THREE.Group();
-  FG.position.y=-.28;
-
-  if(['flan','ube','ubeflan','mango'].includes(d.type)){
-    const isUbe=d.type==='ube'||d.type==='ubeflan';
-
-    const bodyMat=makePhy({
-      color:d.bodyColor,roughness:.28,metalness:0,clearcoat:.58,clearcoatRoughness:.22,
-      transparent:true,opacity:.975,bumpMap:flanBump,bumpScale:.009,envMapIntensity:.88,
-      sheen:isUbe?.58:.30,sheenColor:isUbe?0xcc88ff:0xffee99,sheenRoughness:.36
-    });
-    const syrupMat=makePhy({
-      color:d.syrupColor,roughness:.038,metalness:.1,clearcoat:1.0,clearcoatRoughness:.018,
-      transparent:true,opacity:.88,normalMap:caramelNorm,normalScale:.38,envMapIntensity:2.2
-    });
-
-    // Llanera tin
-    const llanera=new THREE.Mesh(sharedLlaneraGeo,llaneraMat);
-    llanera.position.y=-.02;llanera.castShadow=true;llanera.receiveShadow=true;FG.add(llanera);
-
-    // Flan body
-    const flan=new THREE.Mesh(sharedFlanGeo,bodyMat);
-    flan.castShadow=true;flan.receiveShadow=true;FG.add(flan);
-
-    // Glossy caramel top
-    const top=new THREE.Mesh(sharedTopGeo,syrupMat);FG.add(top);
-
-    // Oval-perimeter drips
-    for(let j=0;j<16;j++){ // Reduced from 22
-      const ang=(Math.PI*2/16)*j+(Math.random()-.5)*.38;
-      const drip=new THREE.Mesh(mkDripGeo(.14+Math.random()*.58,.052+Math.random()*.038),syrupMat);
-      const A=1.93,B=1.93*OVAL_Z;
-      drip.position.set(A*Math.cos(ang)*.99,.505,B*Math.sin(ang)*.99);
-      const nx=B*Math.cos(ang),nz=A*Math.sin(ang);
-      drip.rotation.y=Math.atan2(nz,nx)+Math.PI;drip.rotation.z=.04+Math.random()*.07;
-      FG.add(drip);
+  const plate = new THREE.Mesh(createPlate(), plateMat);
+  plate.position.y = -0.72;
+  plate.scale.set(0.9, 0.9, 0.9);
+  plate.castShadow = true;
+  plate.receiveShadow = true;
+  group.add(plate);
+  
+  const dessertGroup = new THREE.Group();
+  dessertGroup.position.y = -0.32;
+  
+  if (d.type === 'flan' || d.type === 'ube' || d.type === 'ubeflan' || d.type === 'mango') {
+    // Llanera mold (metal tin)
+    const llanera = new THREE.Mesh(createLlanera(), makeMetalMaterial());
+    llanera.castShadow = true;
+    llanera.receiveShadow = true;
+    dessertGroup.add(llanera);
+    
+    // Main custard body
+    const bodyMat = makeCustardMaterial(d.bodyColor, d.type === 'ube' ? 0.32 : 0.28, d.type === 'ube' ? 0.55 : 0.35);
+    const bodyGeo = createFlanBody();
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.castShadow = true;
+    body.receiveShadow = true;
+    dessertGroup.add(body);
+    
+    // Caramel top layer
+    const caramelMat = makeCaramelMaterial(d.caramelColor);
+    const topGeo = createCaramelTop();
+    const caramelTop = new THREE.Mesh(topGeo, caramelMat);
+    caramelTop.castShadow = true;
+    dessertGroup.add(caramelTop);
+    
+    // Add drips around edge
+    for (let i = 0; i < 18; i++) {
+      const angle = (i / 18) * Math.PI * 2 + Math.random() * 0.3;
+      const drip = createDrip(angle, 0.7 + Math.random() * 0.6);
+      dessertGroup.add(drip);
     }
-
-    // Subsurface glow
-    const glowMat=makePhy({color:d.glowColor,transparent:true,opacity:.11,roughness:1,side:THREE.BackSide});
-    const glow=new THREE.Mesh(new THREE.SphereGeometry(1.18,16,12),glowMat); // Reduced polys
-    glow.scale.set(1,.52,OVAL_Z);glow.position.y=.22;FG.add(glow);
-
-    // Specular highlight
-    const hl=new THREE.Mesh(new THREE.SphereGeometry(.52,12,12),makePhy({color:0xffffff,transparent:true,opacity:.055,roughness:0,clearcoat:1,depthWrite:false}));
-    hl.position.set(.3,.72,.32*OVAL_Z);FG.add(hl);
-
-  } else if(d.type==='graham'){
-    FG.add(mkCyl(1.62,.28,makePhy({color:0x3A2610,roughness:.72,clearcoat:.04,bumpMap:flanBump,bumpScale:.013}),.0));
-    FG.add(mkCyl(1.60,.40,makePhy({color:0xF0C010,roughness:.28,clearcoat:.40,clearcoatRoughness:.24}),.29));
-    FG.add(mkCyl(1.58,.36,makePhy({color:0xFFFDF8,roughness:.24,clearcoat:.54,clearcoatRoughness:.16}),.70));
-    const slMat=makePhy({color:0xFFB018,roughness:.11,clearcoat:.93,clearcoatRoughness:.04,transparent:true,opacity:.83,envMapIntensity:1.7});
-    for(let k=0;k<9;k++){const sa=(k/9)*Math.PI*2;const s=new THREE.Mesh(new THREE.SphereGeometry(.32,12,8,0,Math.PI*2,0,Math.PI*.42),slMat);s.position.set(Math.cos(sa)*.50,1.05,Math.sin(sa)*.50*OVAL_Z);s.rotation.z=Math.PI;s.rotation.y=sa;FG.add(s);}
-    const crMat=new THREE.MeshStandardMaterial({color:0x8B5E2A,roughness:.95});
-    for(let k=0;k<18;k++){const ca=Math.random()*Math.PI*2,cr=Math.random()*1.25;const c=new THREE.Mesh(new THREE.SphereGeometry(.04+Math.random()*.04,6,6),crMat);c.position.set(Math.cos(ca)*cr,.99,Math.sin(ca)*cr*OVAL_Z);FG.add(c);}
-
-  } else if(d.type==='blackforest'){
-    const chMat=makePhy({color:0x120402,roughness:.82,clearcoat:.04,bumpMap:flanBump,bumpScale:.022});
-    const crMat=makePhy({color:0xFFFCF8,roughness:.21,clearcoat:.44,clearcoatRoughness:.19});
-    FG.add(mkCyl(1.32,.5,chMat,.0));FG.add(mkCyl(1.28,.22,crMat,.51));FG.add(mkCyl(1.32,.5,chMat,.74));
-    const gnMat=makePhy({color:0x080101,roughness:.04,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:1.9});
-    for(let j=0;j<12;j++){const a=(Math.PI*2/12)*j+(Math.random()-.5)*.46;const drip=new THREE.Mesh(mkDripGeo(.16+Math.random()*.34,.058),gnMat);const A=1.30,B=1.30*OVAL_Z;drip.position.set(A*Math.cos(a),1.26,B*Math.sin(a));drip.rotation.y=Math.atan2(A*Math.sin(a),B*Math.cos(a))+Math.PI;drip.rotation.z=.07;FG.add(drip);}
-    FG.add(mkCyl(1.24,.18,crMat,1.26));
-    const cherryMat=makePhy({color:0x7A0010,roughness:.04,clearcoat:1,clearcoatRoughness:.01,transparent:true,opacity:.97,envMapIntensity:1.9});
-    const stemMat=new THREE.MeshStandardMaterial({color:0x1A3A0A,roughness:.9});
-    for(let k=0;k<6;k++){const ca=(k/6)*Math.PI*2;const A=.70,B=.70*OVAL_Z;const ch=new THREE.Mesh(new THREE.SphereGeometry(.16,16,16),cherryMat);ch.position.set(A*Math.cos(ca),1.52,B*Math.sin(ca));FG.add(ch);const st=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.26,6),stemMat);st.position.set(A*Math.cos(ca),1.66,B*Math.sin(ca));st.rotation.z=.28+Math.random()*.22;st.rotation.y=ca;FG.add(st);}
-    const cc=new THREE.Mesh(new THREE.SphereGeometry(.18,16,16),cherryMat);cc.position.set(0,1.56,0);FG.add(cc);
+    
+    // Subtle internal glow
+    const glowMat = new THREE.MeshPhysicalMaterial({ color: d.glowColor, emissive: d.glowColor, emissiveIntensity: 0.12, transparent: true, opacity: 0.2, side: THREE.BackSide });
+    const glowSphere = new THREE.Mesh(new THREE.SphereGeometry(1.1, 24, 24), glowMat);
+    glowSphere.scale.set(1, 0.55, 1.55);
+    glowSphere.position.y = 0.2;
+    dessertGroup.add(glowSphere);
+    
+  } else if (d.type === 'graham') {
+    // Layers: graham crust, mango cream, mango slices
+    const crustMat = new THREE.MeshPhysicalMaterial({ color: 0xC29A5A, roughness: 0.75, clearcoat: 0.1 });
+    const creamMat = new THREE.MeshPhysicalMaterial({ color: 0xFFF5E8, roughness: 0.28, clearcoat: 0.5 });
+    const mangoMat = new THREE.MeshPhysicalMaterial({ color: 0xFDBC40, roughness: 0.22, clearcoat: 0.6 });
+    
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(1.68, 1.68, 0.28, 48), crustMat);
+    base.position.y = 0;
+    base.castShadow = true;
+    dessertGroup.add(base);
+    
+    const creamLayer = new THREE.Mesh(new THREE.CylinderGeometry(1.64, 1.64, 0.32, 48), creamMat);
+    creamLayer.position.y = 0.28;
+    creamLayer.castShadow = true;
+    dessertGroup.add(creamLayer);
+    
+    const mangoLayer = new THREE.Mesh(new THREE.CylinderGeometry(1.62, 1.62, 0.3, 48), mangoMat);
+    mangoLayer.position.y = 0.58;
+    mangoLayer.castShadow = true;
+    dessertGroup.add(mangoLayer);
+    
+    // Mango slices on top
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const slice = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 16), mangoMat);
+      slice.position.set(Math.cos(angle) * 1.1, 0.88, Math.sin(angle) * 1.1);
+      slice.scale.set(0.7, 0.35, 0.7);
+      dessertGroup.add(slice);
+    }
+    // Graham crumbles
+    for (let i = 0; i < 60; i++) {
+      const crumb = new THREE.Mesh(new THREE.SphereGeometry(0.03 + Math.random()*0.04, 5), new THREE.MeshStandardMaterial({ color: 0xBC8A4A, roughness: 0.9 }));
+      crumb.position.set((Math.random() - 0.5) * 2.2, 0.86 + Math.random() * 0.2, (Math.random() - 0.5) * 2.2);
+      dessertGroup.add(crumb);
+    }
+  } else if (d.type === 'blackforest') {
+    const chocoMat = new THREE.MeshPhysicalMaterial({ color: 0x3A2418, roughness: 0.68, clearcoat: 0.2 });
+    const creamMat = new THREE.MeshPhysicalMaterial({ color: 0xFFF5EA, roughness: 0.24, clearcoat: 0.55 });
+    const cherryMat = new THREE.MeshPhysicalMaterial({ color: 0xAA2A2A, roughness: 0.12, metalness: 0.05, clearcoat: 0.8 });
+    
+    const bottom = new THREE.Mesh(new THREE.CylinderGeometry(1.52, 1.52, 0.48, 48), chocoMat);
+    bottom.position.y = 0;
+    bottom.castShadow = true;
+    dessertGroup.add(bottom);
+    
+    const creamMid = new THREE.Mesh(new THREE.CylinderGeometry(1.48, 1.48, 0.28, 48), creamMat);
+    creamMid.position.y = 0.48;
+    creamMid.castShadow = true;
+    dessertGroup.add(creamMid);
+    
+    const topCake = new THREE.Mesh(new THREE.CylinderGeometry(1.52, 1.52, 0.48, 48), chocoMat);
+    topCake.position.y = 0.76;
+    topCake.castShadow = true;
+    dessertGroup.add(topCake);
+    
+    const creamTop = new THREE.Mesh(new THREE.CylinderGeometry(1.48, 1.48, 0.18, 48), creamMat);
+    creamTop.position.y = 1.22;
+    creamTop.castShadow = true;
+    dessertGroup.add(creamTop);
+    
+    // Chocolate drips
+    const dripMat = new THREE.MeshPhysicalMaterial({ color: 0x4A2818, roughness: 0.2, clearcoat: 0.7 });
+    for (let i = 0; i < 16; i++) {
+      const angle = (i / 16) * Math.PI * 2;
+      const drip = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.28, 6), dripMat);
+      drip.position.set(Math.cos(angle) * 1.55, 1.02, Math.sin(angle) * 1.55);
+      drip.rotation.z = angle;
+      dessertGroup.add(drip);
+    }
+    // Cherries
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const cherry = new THREE.Mesh(new THREE.SphereGeometry(0.18, 24, 24), cherryMat);
+      cherry.position.set(Math.cos(angle) * 0.95, 1.38, Math.sin(angle) * 0.95);
+      dessertGroup.add(cherry);
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), new THREE.MeshStandardMaterial({ color: 0x5A7A2A }));
+      stem.position.set(Math.cos(angle) * 0.93, 1.55, Math.sin(angle) * 0.93);
+      stem.rotation.z = 0.3;
+      dessertGroup.add(stem);
+    }
+    const topCherry = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 32), cherryMat);
+    topCherry.position.set(0, 1.52, 0);
+    dessertGroup.add(topCherry);
   }
-
-  G.add(FG);G.scale.set(.001,.001,.001);
-  scene.add(G);
-  groups.push({G,FG,sd});
+  
+  group.add(dessertGroup);
+  group.scale.set(0.001, 0.001, 0.001);
+  scene.add(group);
+  groups.push({ group, dessertGroup, shadowDisc });
 });
 
-// ══════════════════════════════════════
-// UI — PROGRESS DOTS
-// ══════════════════════════════════════
-const progressEl=document.getElementById('progress');
-DS.forEach((_,i)=>{
-  const dot=document.createElement('div');
-  dot.className='pdot'+(i===0?' on':'');
-  dot.dataset.i=i;
-  dot.addEventListener('click',()=>focusOn(i));
-  progressEl.appendChild(dot);
+// -------- UI INTERACTIONS --------
+const progressDiv = document.getElementById('progress');
+DS.forEach((_, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'pdot' + (i === 0 ? ' on' : '');
+  dot.dataset.i = i;
+  dot.addEventListener('click', () => focusOn(i));
+  progressDiv.appendChild(dot);
 });
 
-let active=0;
-function focusOn(i){
-  active=Math.max(0,Math.min(DS.length-1,i));
-  const d=DS[active];
-  const dn=document.getElementById('dname'),dd=document.getElementById('ddesc'),dp=document.getElementById('dprice');
-  [dn,dd].forEach(el=>{el.style.opacity='0';el.style.transform='translateY(10px)';});
-  setTimeout(()=>{
-    dn.textContent=d.name;dd.textContent=d.desc;if(dp)dp.textContent=d.price||'';
-    [dn,dd].forEach(el=>{el.style.opacity='1';el.style.transform='translateY(0)';});
-  },210);
-  document.querySelectorAll('.mi').forEach((el,idx)=>el.classList.toggle('on',idx===active));
-  document.querySelectorAll('.pdot').forEach((el,idx)=>el.classList.toggle('on',idx===active));
+let active = 0;
+function focusOn(i) {
+  active = Math.max(0, Math.min(DS.length - 1, i));
+  const d = DS[active];
+  const dn = document.getElementById('dname'), dd = document.getElementById('ddesc'), dp = document.getElementById('dprice');
+  [dn, dd].forEach(el => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; });
+  setTimeout(() => {
+    dn.textContent = d.name;
+    dd.textContent = d.desc;
+    if (dp) dp.textContent = d.price;
+    [dn, dd].forEach(el => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+  }, 150);
+  document.querySelectorAll('.mi').forEach((el, idx) => el.classList.toggle('on', idx === active));
+  document.querySelectorAll('.pdot').forEach((el, idx) => el.classList.toggle('on', idx === active));
 }
 
-document.querySelectorAll('.mi').forEach(el=>el.addEventListener('click',()=>focusOn(+el.dataset.i)));
-document.addEventListener('wheel',e=>{e.preventDefault();focusOn(active+(e.deltaY>0?1:-1));},{passive:false});
-document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')focusOn(active+1);if(e.key==='ArrowLeft'||e.key==='ArrowUp')focusOn(active-1);});
-let swipeX=0;
-document.addEventListener('touchstart',e=>{swipeX=e.touches[0].clientX;},{passive:true});
-document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-swipeX;if(Math.abs(dx)>55)focusOn(active+(dx<0?1:-1));},{passive:true});
+document.querySelectorAll('.mi').forEach(el => el.addEventListener('click', () => focusOn(parseInt(el.dataset.i))));
+document.addEventListener('wheel', e => { e.preventDefault(); focusOn(active + (e.deltaY > 0 ? 1 : -1)); }, { passive: false });
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') focusOn(active + 1);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') focusOn(active - 1);
+});
 
-// ══════════════════════════════════════
-// ENTER EXPERIENCE
-// ══════════════════════════════════════
-let entered=false;
-function enterExperience(){
-  entered=true;
-  const loading=document.getElementById('loading');
-  loading.classList.add('out');setTimeout(()=>loading.style.display='none',1900);
-  ['hdr','menu','info','progress'].forEach(id=>{const el=document.getElementById(id);if(el)el.classList.add('vis');});
-  groups.forEach(({G},i)=>gsap.to(G.scale,{x:1,y:1,z:1,duration:1.85,delay:.2+i*.09,ease:'elastic.out(1,.56)'}));
-}
-let ac=setInterval(()=>{if(prog>=100){clearInterval(ac);setTimeout(enterExperience,600);}},80);
+// -------- LOADING & ENTER --------
+let prog = 0;
+const lfill = document.getElementById('lfill');
+const progInt = setInterval(() => {
+  prog += Math.random() * 4 + 2;
+  if (prog >= 100) { prog = 100; clearInterval(progInt); }
+  lfill.style.width = prog + '%';
+}, 35);
 
-// ══════════════════════════════════════
-// RENDER LOOP
-// ══════════════════════════════════════
-const clock=new THREE.Clock();
-let camX=0,camY=3.6,camZ=13.5;
-
-function animate(){
-  requestAnimationFrame(animate);
-  const t=clock.getElapsedTime();
-
-  smoothMX+=(mouseNormX-smoothMX)*.046;
-  smoothMY+=(mouseNormY-smoothMY)*.046;
-
-  // Parallax camera
-  camX+=(active*8.0-camX)*.070;
-  camY+=(3.6+smoothMY*1.85-camY)*.038;
-  camZ+=(13.5-Math.abs(smoothMY)*.95-camZ)*.038;
-  camera.position.set(camX,camY,camZ);
-  camera.lookAt(camX+smoothMX*2.6,.6+smoothMY*.28,0);
-
-  // Track lights
-  keyLight.position.x=camX+4;
-  keyLight.target.position.set(camX,0,0);keyLight.target.updateMatrixWorld();
-  rimLight.position.x=camX-6;bounceLight.position.x=camX;
-
-  groups.forEach(({G,FG,sd},i)=>{
-    const dist=Math.abs(i-active);
-
-    if(entered&&G.scale.x>.08&&!gsap.isTweening(G.scale)){
-      const ts=Math.max(.40,1-dist*.18);
-      G.scale.setScalar(G.scale.x+(ts-G.scale.x)*.052);
-    }
-
-    G.position.y=Math.sin(t*1.42+i*1.28)*.068;
-    FG.rotation.y+=.00135;
-
-    if(i===active){
-      FG.rotation.x+=((-smoothMY*.19)-FG.rotation.x)*.062;
-      FG.rotation.z+=((smoothMX*.058)-FG.rotation.z)*.062;
-      FG.rotation.y+=smoothMX*.015;
-    } else {
-      FG.rotation.x*=.88;FG.rotation.z*=.88;
-    }
-
-    if(sd) sd.material.opacity=Math.max(.08,.52-dist*.17);
+function enterExperience() {
+  document.getElementById('loading').classList.add('out');
+  setTimeout(() => document.getElementById('loading').style.display = 'none', 1500);
+  ['hdr', 'menu', 'info', 'progress'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('vis');
   });
+  groups.forEach(({ group }, i) => {
+    gsap.to(group.scale, { x: 1, y: 1, z: 1, duration: 1.4, delay: 0.1 + i * 0.08, ease: "backOut(0.7)" });
+  });
+}
 
-  renderer.render(scene,camera);
+let checkLoad = setInterval(() => {
+  if (prog >= 100) { clearInterval(checkLoad); setTimeout(enterExperience, 480); }
+}, 50);
+
+// -------- ANIMATION LOOP --------
+let clock = new THREE.Clock();
+let camX = 0, camY = 2.8, camZ = 12.5;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = performance.now() * 0.002;
+  
+  smoothMX += (mouseNormX - smoothMX) * 0.07;
+  smoothMY += (mouseNormY - smoothMY) * 0.07;
+  
+  camX += (active * 8.2 - camX) * 0.075;
+  camY += (2.6 + smoothMY * 1.5 - camY) * 0.045;
+  camZ += (12.0 - Math.abs(smoothMY) * 0.9 - camZ) * 0.045;
+  
+  camera.position.set(camX, camY, camZ);
+  camera.lookAt(camX + smoothMX * 2.2, 0.6 + smoothMY * 0.45, 0);
+  
+  // Dynamic lighting
+  rimLight.intensity = 0.95 + Math.sin(t * 1.3) * 0.15;
+  
+  groups.forEach(({ group, dessertGroup, shadowDisc }, i) => {
+    const dist = Math.abs(i - active);
+    if (group.scale.x > 0.05 && !gsap.isTweening(group.scale)) {
+      const target = Math.max(0.58, 1 - dist * 0.18);
+      group.scale.setScalar(group.scale.x + (target - group.scale.x) * 0.09);
+    }
+    group.position.y = Math.sin(t * 1.4 + i * 1.2) * 0.045;
+    dessertGroup.rotation.y += 0.0012;
+    if (i === active) {
+      dessertGroup.rotation.x += (-smoothMY * 0.16 - dessertGroup.rotation.x) * 0.09;
+      dessertGroup.rotation.z += (smoothMX * 0.05 - dessertGroup.rotation.z) * 0.09;
+    } else {
+      dessertGroup.rotation.x *= 0.96;
+      dessertGroup.rotation.z *= 0.96;
+    }
+    if (shadowDisc) shadowDisc.material.opacity = Math.max(0.3, 0.55 - dist * 0.2);
+  });
+  
+  renderer.render(scene, camera);
 }
 animate();
 
-window.addEventListener('resize',()=>{
-  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
 });
 </script>
 </body>
