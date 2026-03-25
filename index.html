@@ -12,7 +12,7 @@
   --bg:#060402; --cream:rgba(245,236,215,0.52);
 }
 *{margin:0;padding:0;box-sizing:border-box; user-select:none;}
-html,body{width:100%;height:100%;overflow:hhidden;background:var(--bg);font-family:'Cormorant Garamond',serif}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Cormorant Garamond',serif}
 canvas#webgl{position:fixed;inset:0;display:block;z-index:1}
 #vig{position:fixed;inset:0;z-index:8;pointer-events:none;
   background:radial-gradient(ellipse 78% 68% at 50% 52%,transparent 28%,rgba(6,4,2,0.48) 65%,rgba(6,4,2,0.95) 100%)}
@@ -162,7 +162,8 @@ nav a:hover{color:rgba(240,208,128,0.82)}
 
 <script>
 // ============================================================
-// FIXED: FULLY VISIBLE MODELS WITH REALISTIC MATERIALS
+// FIXED: NO MORE WebGL uniform errors - simplified materials
+// Models render fully with realistic look
 // ============================================================
 const DS = [
   {name:'Classic Leche Flan',desc:'Slow-steamed for 3 hours. Velvety egg custard crowned with molten amber caramel.',price:'₱ 285 · 500g Llanera',type:'flan',bodyColor:0xDAA520,caramelColor:0x8B3A1A,glowColor:0xFFCC66},
@@ -230,8 +231,8 @@ groundPlane.position.y = -0.75;
 groundPlane.receiveShadow = true;
 scene.add(groundPlane);
 
-// -------- HELPER: Create realistic custard material --------
-function makeCustardMaterial(color, roughnessVal=0.28, sheenVal=0.3) {
+// -------- MATERIALS (simplified, no sheen) --------
+function makeCustardMaterial(color, roughnessVal=0.28) {
   return new THREE.MeshPhysicalMaterial({
     color: color,
     roughness: roughnessVal,
@@ -239,10 +240,7 @@ function makeCustardMaterial(color, roughnessVal=0.28, sheenVal=0.3) {
     clearcoat: 0.72,
     clearcoatRoughness: 0.18,
     emissive: 0x331100,
-    emissiveIntensity: 0.05,
-    sheen: sheenVal,
-    sheenColor: 0xFFEEAA,
-    sheenRoughness: 0.4
+    emissiveIntensity: 0.05
   });
 }
 
@@ -269,8 +267,7 @@ function makeMetalMaterial() {
   });
 }
 
-// -------- GEOMETRIES (simplified but visually appealing) --------
-// Llanera mold (oval tin)
+// -------- GEOMETRIES (robust, no extrusion issues) --------
 function createLlanera() {
   const shape = new THREE.Shape();
   shape.absellipse(0, 0, 2.0, 1.6);
@@ -362,7 +359,7 @@ DS.forEach((d, idx) => {
     dessertGroup.add(llanera);
     
     // Main custard body
-    const bodyMat = makeCustardMaterial(d.bodyColor, d.type === 'ube' ? 0.32 : 0.28, d.type === 'ube' ? 0.55 : 0.35);
+    const bodyMat = makeCustardMaterial(d.bodyColor, d.type === 'ube' ? 0.32 : 0.28);
     const bodyGeo = createFlanBody();
     const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.castShadow = true;
