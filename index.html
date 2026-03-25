@@ -183,27 +183,48 @@ renderer.toneMappingExposure=1.25;
 renderer.physicallyCorrectLights=true;
 
 // ── LIGHTS ──
-scene.add(new THREE.AmbientLight(0xfff4e0,0.65));
-const keyLight=new THREE.SpotLight(0xfffbe8,5,0,Math.PI/5,0.35,1.5);
-keyLight.position.set(3,11,5);keyLight.castShadow=true;
-keyLight.shadow.mapSize.width=2048;keyLight.shadow.mapSize.height=2048;
-keyLight.shadow.bias=-0.0002;
+scene.add(new THREE.AmbientLight(0xfff5e6,0.55));
+const keyLight=new THREE.SpotLight(0xfffbf0,6,0,Math.PI/4.5,0.4,1.2);
+keyLight.position.set(3,11,6);keyLight.castShadow=true;
+keyLight.shadow.mapSize.width=4096;keyLight.shadow.mapSize.height=4096; // 4k soft shadows
+keyLight.shadow.bias=-0.0001;
 scene.add(keyLight);
-const rimLight=new THREE.SpotLight(0xffd888,3,0,Math.PI/3.5,0.65,2);
-rimLight.position.set(-5,6,-6);scene.add(rimLight);
-const fillLight=new THREE.DirectionalLight(0xd0e4ff,0.75);
-fillLight.position.set(-8,2,4);scene.add(fillLight);
-const bounceLight=new THREE.PointLight(0xff9940,1.4,10,2);
-bounceLight.position.set(0,-1,2);scene.add(bounceLight);
+const rimLight=new THREE.SpotLight(0xffd888,4.5,0,Math.PI/3,0.7,1.8);
+rimLight.position.set(-6,7,-7);scene.add(rimLight);
+const fillLight=new THREE.DirectionalLight(0xd0e4ff,1.2);
+fillLight.position.set(-8,3,5);scene.add(fillLight);
+const bounceLight=new THREE.PointLight(0xffa550,2.0,12,2);
+bounceLight.position.set(0,-1,3);scene.add(bounceLight);
+
+// Studio Environment
+const envScene=new THREE.Scene();
+const sb1=new THREE.Mesh(new THREE.PlaneGeometry(12,12),new THREE.MeshBasicMaterial({color:0xffffff}));
+sb1.position.set(0,8,-6);envScene.add(sb1);
+const sb2=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshBasicMaterial({color:0xfff5d0}));
+sb2.position.set(8,4,4);sb2.lookAt(0,0,0);envScene.add(sb2);
+const pmrem=new THREE.PMREMGenerator(renderer);
+pmrem.compileEquirectangularShader();
+scene.environment=pmrem.fromScene(envScene).texture;
+
+// ── PROCEDURAL BUMPS ──
+const bc=document.createElement('canvas');bc.width=bc.height=512;const bx=bc.getContext('2d');
+bx.fillStyle='#808080';bx.fillRect(0,0,512,512);
+for(let i=0;i<80000;i++){
+  bx.fillStyle=Math.random()>.5?'#929292':'#686868';
+  bx.beginPath();bx.arc(Math.random()*512,Math.random()*512,Math.random()*1.0,0,7);bx.fill();
+}
+const flanBump=new THREE.CanvasTexture(bc);flanBump.wrapS=flanBump.wrapT=THREE.RepeatWrapping;flanBump.repeat.set(3,3);
+
+const mc=document.createElement('canvas');mc.width=mc.height=512;const mctx=mc.getContext('2d');
+mctx.fillStyle='#808080';mctx.fillRect(0,0,512,512);mctx.fillStyle='#999999';
+for(let i=0;i<20000;i++)mctx.fillRect(Math.random()*512,Math.random()*512,Math.random()*25+5,1);
+const metalBump=new THREE.CanvasTexture(mc);metalBump.wrapS=metalBump.wrapT=THREE.RepeatWrapping;
 
 // ── TABLE ──
-const tMesh=new THREE.Mesh(new THREE.PlaneGeometry(70,16),new THREE.MeshPhysicalMaterial({color:0x0E0604,roughness:0.3,metalness:0,clearcoat:0.65,clearcoatRoughness:0.12}));
-tMesh.rotation.x=-Math.PI/2;tMesh.position.y=-0.83;tMesh.receiveShadow=true;scene.add(tMesh);
+const tMesh=new THREE.Mesh(new THREE.PlaneGeometry(80,40),new THREE.MeshPhysicalMaterial({color:0x090403,roughness:0.25,metalness:0,clearcoat:0.8,clearcoatRoughness:0.1}));
+tMesh.rotation.x=-Math.PI/2;tMesh.position.y=-0.7;tMesh.receiveShadow=true;scene.add(tMesh);
 
-// ── SAFE PHYSICAL MATERIAL (r128-compatible) ──
-// In r128, advanced props like thickness/attenuationColor/sheenColor/sheenRoughness
-// exist on the instance but must NOT be passed in constructor.
-// We set them directly after construction, guarded by existence checks.
+// ── SAFE PHYSICAL MATERIAL ──
 function makePhy(o){
   const m=new THREE.MeshPhysicalMaterial({
     color:      o.color      !=null ? o.color      : 0xffffff,
@@ -214,65 +235,85 @@ function makePhy(o){
     transparent:!!(o.transparent||(o.transmission>0)||(o.opacity!=null&&o.opacity<1)),
     opacity:    o.opacity    !=null ? o.opacity     : 1,
     side:       o.side       !=null ? o.side        : THREE.FrontSide,
-    depthWrite: o.depthWrite !=null ? o.depthWrite  : true
+    depthWrite: o.depthWrite !=null ? o.depthWrite  : true,
+    bumpMap:    o.bumpMap,
+    bumpScale:  o.bumpScale  !=null ? o.bumpScale   : 0.01
   });
-  // Post-construction safe-sets
   if(o.transmission!=null) m.transmission=o.transmission;
   if(o.ior!=null)          m.ior=o.ior;
-  if(o.reflectivity!=null) m.reflectivity=o.reflectivity;
   if(o.envMapIntensity!=null) m.envMapIntensity=o.envMapIntensity;
-  // sheen (all three exist in r128 MeshPhysicalMaterial)
-  if(o.sheen!=null){
-    m.sheen=o.sheen;
-    if(o.sheenColor!=null && m.sheenColor)  m.sheenColor.set(o.sheenColor);
-    if(o.sheenRoughness!=null && m.sheenRoughness!=null) m.sheenRoughness=o.sheenRoughness;
-  }
-  // thickness / attenuation — only set if prop exists on instance
-  if(o.thickness!=null         && 'thickness'          in m) m.thickness=o.thickness;
-  if(o.attenuationColor!=null  && m.attenuationColor)         m.attenuationColor.set(o.attenuationColor);
-  if(o.attenuationDistance!=null && 'attenuationDistance' in m) m.attenuationDistance=o.attenuationDistance;
+  if(o.sheen!=null){m.sheen=o.sheen;if(o.sheenColor!=null&&m.sheenColor)m.sheenColor.set(o.sheenColor);if(o.sheenRoughness!=null&&m.sheenRoughness!=null)m.sheenRoughness=o.sheenRoughness;}
+  if(o.thickness!=null && 'thickness' in m) m.thickness=o.thickness;
   return m;
 }
 
 // ── GEOMETRY BUILDERS ──
 function mkFlanGeo(){
   const p=[
-    new THREE.Vector2(0,-0.62),new THREE.Vector2(1.27,-0.62),
-    new THREE.Vector2(1.37,-0.52),new THREE.Vector2(1.31,0.08),
-    new THREE.Vector2(1.18,0.52),new THREE.Vector2(0.78,0.74),
-    new THREE.Vector2(0,0.78)
+    new THREE.Vector2(0,-0.60),    
+    new THREE.Vector2(1.35,-0.60), 
+    new THREE.Vector2(1.48,-0.50), 
+    new THREE.Vector2(1.35,0.0),   
+    new THREE.Vector2(1.22,0.45),  
+    new THREE.Vector2(1.0,0.68),   
+    new THREE.Vector2(0.6,0.76),   
+    new THREE.Vector2(0,0.78)      
   ];
-  return new THREE.LatheGeometry(p,80);
+  const geo=new THREE.LatheGeometry(p,128);
+  geo.scale(1, 0.82, 1.6); // Photorealistic Oval Shape
+  return geo;
 }
 function mkPoolGeo(){
-  const g=new THREE.CylinderGeometry(1.15,1.15,0.11,80,3);
+  const g=new THREE.CylinderGeometry(1.08,1.08,0.12,128,4);
+  g.scale(1, 1, 1.6);
   const pos=g.attributes.position;
   for(let i=0;i<pos.count;i++){
-    const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i),r=Math.hypot(vx,vz),a=Math.atan2(vz,vx);
-    if(r>0.5){const w=Math.sin(a*7+.3)*.055+Math.cos(a*4+1.1)*.035+Math.sin(a*11)*.012;pos.setX(i,vx*(1+w));pos.setZ(i,vz*(1+w));if(vy>0)pos.setY(i,vy+Math.sin(a*5)*.016+.008);}
+    const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i);
+    const r=Math.sqrt(vx*vx+(vz/1.6)*(vz/1.6));
+    const a=Math.atan2(vz/1.6,vx);
+    if(r>0.5){
+      const w=Math.sin(a*8)*.025+Math.cos(a*5+.5)*.035;
+      pos.setX(i,vx*(1+w)); pos.setZ(i,vz*(1+w));
+      if(vy>0) pos.setY(i, vy - r*r*0.06 + Math.sin(a*6)*.01);
+      else pos.setY(i, vy+0.03); 
+    }
   }
   g.computeVertexNormals();return g;
 }
 function mkDripGeo(len,wid){
   const p=[
-    new THREE.Vector2(0,0),new THREE.Vector2(wid*.5,.04),
-    new THREE.Vector2(wid,0),new THREE.Vector2(wid*.88,-len*.38),
-    new THREE.Vector2(wid*.5,-len*.82),new THREE.Vector2(wid*.14,-len),
+    new THREE.Vector2(0,0),new THREE.Vector2(wid*.6,.06),
+    new THREE.Vector2(wid,0),new THREE.Vector2(wid*.85,-len*.35),
+    new THREE.Vector2(wid*.6,-len*.75),new THREE.Vector2(wid*.2,-len),
     new THREE.Vector2(0,-len)
   ];
-  return new THREE.LatheGeometry(p,14);
+  return new THREE.LatheGeometry(p,24);
 }
-function mkCyl(r,h,mat,y){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,64),mat);m.position.y=y+h/2;m.castShadow=true;return m;}
+function mkCyl(r,h,mat,y){
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,128),mat);
+  m.scale.set(1, 1, 1.6);
+  m.position.y=y+h/2;m.castShadow=true;m.receiveShadow=true;return m;
+}
+function mkLlaneraGeo() {
+  const p = [
+    new THREE.Vector2(0, -0.2),       
+    new THREE.Vector2(1.8, -0.2),     
+    new THREE.Vector2(1.9, -0.15),    
+    new THREE.Vector2(2.1, 0.15),     
+    new THREE.Vector2(2.25, 0.25),    
+    new THREE.Vector2(2.32, 0.23),    
+    new THREE.Vector2(2.28, 0.15),    
+  ];
+  const geo = new THREE.LatheGeometry(p, 128);
+  geo.scale(1, 1, 1.6);
+  return geo;
+}
 
 // ── SHARED MATS ──
-const plateMat=makePhy({color:0xF8F4EE,roughness:.07,metalness:0,clearcoat:.9,clearcoatRoughness:.09});
-const goldMat=new THREE.MeshStandardMaterial({color:0xC8A028,roughness:.18,metalness:.95});
-const dishMat=makePhy({color:0xffffff,roughness:.02,metalness:0,clearcoat:1,clearcoatRoughness:0,transparent:true,opacity:.16});
-const shadowMat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.42});
-const plateGeo=new THREE.CylinderGeometry(2.75,2.35,.18,72);
-const rimGeo=new THREE.TorusGeometry(2.6,.018,12,72);
-const dishGeo=new THREE.CylinderGeometry(2.4,2.4,.01,72);
-const shadowGeo=new THREE.CircleGeometry(2.8,64);
+const llaneraMat=makePhy({color:0xe5e5dc,roughness:0.35,metalness:0.8,bumpMap:metalBump,bumpScale:0.003,envMapIntensity:1.5});
+const shadowMat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.6});
+const shadowGeo=new THREE.CircleGeometry(2.35,128); 
+const sdg = shadowGeo.clone(); sdg.scale(1, 1.6, 1);
 
 const groups=[];
 
@@ -280,11 +321,12 @@ DS.forEach((d,i)=>{
   const G=new THREE.Group();
   G.position.x=i*7.5;
 
-  // plate assembly
-  const plate=new THREE.Mesh(plateGeo,plateMat);plate.position.y=-.72;plate.castShadow=true;plate.receiveShadow=true;G.add(plate);
-  const rim=new THREE.Mesh(rimGeo,goldMat);rim.position.y=-.63;rim.rotation.x=Math.PI/2;G.add(rim);
-  const dish=new THREE.Mesh(dishGeo,dishMat);dish.position.y=-.635;G.add(dish);
-  const sd=new THREE.Mesh(shadowGeo,shadowMat);sd.rotation.x=-Math.PI/2;sd.position.y=-.82;G.add(sd);
+  const plate=new THREE.Mesh(mkLlaneraGeo(),llaneraMat);
+  plate.position.y=-0.5; plate.castShadow=true;plate.receiveShadow=true;
+  G.add(plate);
+
+  const sd=new THREE.Mesh(sdg,shadowMat);
+  sd.rotation.x=-Math.PI/2;sd.position.y=-0.69;G.add(sd);
 
   const FG=new THREE.Group();
 
@@ -292,81 +334,90 @@ DS.forEach((d,i)=>{
     const isUbe=d.type==='ube'||d.type==='ubeflan';
 
     const bodyMat=makePhy({
-      color:d.bodyColor,roughness:.2,metalness:0,
-      clearcoat:.55,clearcoatRoughness:.14,
-      transmission:.06,ior:1.38,
-      sheen:isUbe?.35:0,
-      sheenColor:isUbe?0x9955ee:0xffffff,
-      sheenRoughness:.3
+      color:d.bodyColor,roughness:0.25,metalness:0.0,
+      clearcoat:0.65,clearcoatRoughness:0.2,
+      transmission:0.15,ior:1.45,
+      bumpMap: flanBumpMap, bumpScale: 0.008,
+      sheen:isUbe?.45:0.2,
+      sheenColor:isUbe?0xaa77ff:0xffffff,
+      sheenRoughness:0.35
     });
     const syrupMat=makePhy({
-      color:d.syrupColor,roughness:.008,metalness:0,
-      clearcoat:1,clearcoatRoughness:.008,
-      transmission:.82,ior:1.50
+      color:d.syrupColor,roughness:0.02,metalness:0.15,
+      clearcoat:1,clearcoatRoughness:0.01,
+      transmission:0.9,ior:1.58, envMapIntensity:1.8
     });
 
-    const flan=new THREE.Mesh(mkFlanGeo(),bodyMat);flan.castShadow=true;flan.receiveShadow=true;FG.add(flan);
-    const pool=new THREE.Mesh(mkPoolGeo(),syrupMat);pool.position.y=.79;FG.add(pool);
+    const flan=new THREE.Mesh(mkFlanGeo(),bodyMat);
+    flan.position.y = 0.0;
+    flan.castShadow=true;flan.receiveShadow=true;FG.add(flan);
 
-    for(let j=0;j<13;j++){
-      const ang=(Math.PI*2/13)*j+(Math.random()-.5)*.5;
-      const drip=new THREE.Mesh(mkDripGeo(.15+Math.random()*.42,.042+Math.random()*.028),syrupMat);
-      const r=1.17+Math.random()*.035;
-      drip.position.set(Math.cos(ang)*r,.79,Math.sin(ang)*r);
-      drip.rotation.y=ang+Math.PI;drip.rotation.z=.06+Math.random()*.1;FG.add(drip);
+    const pool=new THREE.Mesh(mkPoolGeo(),syrupMat);pool.position.y=0.64;FG.add(pool);
+
+    for(let j=0;j<18;j++){
+      const ang=(Math.PI*2/18)*j+(Math.random()-.5)*.4;
+      const drip=new THREE.Mesh(mkDripGeo(.18+Math.random()*.55,.055+Math.random()*.04),syrupMat);
+      const A=1.05, B=1.05*1.6;
+      const rx=A*Math.cos(ang), rz=B*Math.sin(ang);
+      drip.position.set(rx*1.01, 0.62, rz*1.01);
+      
+      const nx=B*Math.cos(ang), nz=A*Math.sin(ang);
+      drip.rotation.y = Math.atan2(nz,nx) + Math.PI;
+      drip.rotation.z = 0.05 + Math.random()*.06;
+      FG.add(drip);
     }
 
-    // subsurface glow
-    const glowMat=makePhy({color:isUbe?0xAA66FF:0xFFDD60,transparent:true,opacity:.11,roughness:1,side:THREE.BackSide});
-    const glow=new THREE.Mesh(new THREE.SphereGeometry(.72,32,32),glowMat);glow.position.y=.1;FG.add(glow);
-    // highlight sphere
-    const hlMat=makePhy({color:0xffffff,transparent:true,opacity:.08,roughness:0,clearcoat:1,clearcoatRoughness:0});
-    const hl=new THREE.Mesh(new THREE.SphereGeometry(.55,24,24),hlMat);hl.position.set(.3,.5,.3);FG.add(hl);
+    const glowMat=makePhy({color:isUbe?0xBB77FF:0xFFE880,transparent:true,opacity:.14,roughness:1,side:THREE.BackSide});
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(.75,32,32),glowMat);glow.position.y=.1;FG.add(glow);
+    const hlMat=makePhy({color:0xffffff,transparent:true,opacity:.05,roughness:0,clearcoat:1});
+    const hl=new THREE.Mesh(new THREE.SphereGeometry(.58,24,24),hlMat);hl.position.set(.3,.4,.3);FG.add(hl);
 
   } else if(d.type==='graham'){
-    FG.add(mkCyl(2.0,.28,makePhy({color:0x3A2610,roughness:.55,clearcoat:.12}),.0));
-    FG.add(mkCyl(1.95,.42,makePhy({color:0xF0C010,roughness:.22,clearcoat:.55,clearcoatRoughness:.12}),.29));
-    FG.add(mkCyl(1.9,.38,makePhy({color:0xFFFDF8,roughness:.18,clearcoat:.7,clearcoatRoughness:.12}),.73));
-    const slMat=makePhy({color:0xFFB018,roughness:.28,clearcoat:.7,clearcoatRoughness:.1});
-    for(let k=0;k<7;k++){
-      const sa=(k/7)*Math.PI*2;
-      const s=new THREE.Mesh(new THREE.SphereGeometry(.3,16,8,0,Math.PI*2,0,Math.PI*.4),slMat);
-      s.position.set(Math.cos(sa)*.7,.98,Math.sin(sa)*.7);s.rotation.z=Math.PI;FG.add(s);
+    FG.add(mkCyl(1.7,.28,makePhy({color:0x3A2610,roughness:.7,clearcoat:.05,bumpMap:flanBumpMap,bumpScale:0.01}),.0));
+    FG.add(mkCyl(1.68,.42,makePhy({color:0xF0C010,roughness:.3,clearcoat:.4,clearcoatRoughness:.25}),.29));
+    FG.add(mkCyl(1.65,.38,makePhy({color:0xFFFDF8,roughness:.28,clearcoat:.5,clearcoatRoughness:.18}),.73));
+    const slMat=makePhy({color:0xFFB018,roughness:.15,clearcoat:.9,clearcoatRoughness:.05,transmission:0.5,ior:1.45});
+    for(let k=0;k<9;k++){
+      const sa=(k/9)*Math.PI*2;
+      const s=new THREE.Mesh(new THREE.SphereGeometry(.35,24,12,0,Math.PI*2,0,Math.PI*.4),slMat);
+      s.position.set(Math.cos(sa)*.5, 1.05, Math.sin(sa)*.5*1.6);
+      s.rotation.z=Math.PI; s.rotation.y = sa; FG.add(s);
     }
-    const crMat=new THREE.MeshStandardMaterial({color:0x8B5E2A,roughness:.9});
-    for(let k=0;k<20;k++){
-      const ca=Math.random()*Math.PI*2,cr=Math.random()*1.6;
-      const c=new THREE.Mesh(new THREE.SphereGeometry(.035+Math.random()*.038,6,6),crMat);
-      c.position.set(Math.cos(ca)*cr,.94,Math.sin(ca)*cr);FG.add(c);
+    const crMat=new THREE.MeshStandardMaterial({color:0x8B5E2A,roughness:.95});
+    for(let k=0;k<35;k++){
+      const ca=Math.random()*Math.PI*2,cr=Math.random()*1.3;
+      const c=new THREE.Mesh(new THREE.SphereGeometry(.04+Math.random()*.04,8,8),crMat);
+      c.position.set(Math.cos(ca)*cr, .98, Math.sin(ca)*cr*1.6);FG.add(c);
     }
 
   } else if(d.type==='blackforest'){
-    const chMat=makePhy({color:0x120402,roughness:.62,clearcoat:.1});
-    const crMat=makePhy({color:0xFFFCF8,roughness:.2,clearcoat:.55,clearcoatRoughness:.18});
+    const chMat=makePhy({color:0x120402,roughness:.8,clearcoat:.05,bumpMap:flanBumpMap,bumpScale:0.02});
+    const crMat=makePhy({color:0xFFFCF8,roughness:.25,clearcoat:.4,clearcoatRoughness:.2});
     FG.add(mkCyl(1.38,.5,chMat,.0));
     FG.add(mkCyl(1.32,.22,crMat,.51));
     FG.add(mkCyl(1.38,.5,chMat,.74));
-    // ganache drips
-    const gnMat=makePhy({color:0x0A0202,roughness:.1,clearcoat:.95,clearcoatRoughness:.04});
-    for(let j=0;j<11;j++){
-      const a=(Math.PI*2/11)*j+(Math.random()-.5)*.5;
-      const drip=new THREE.Mesh(mkDripGeo(.14+Math.random()*.28,.05),gnMat);
-      drip.position.set(Math.cos(a)*1.36,1.24,Math.sin(a)*1.36);
-      drip.rotation.y=a+Math.PI;drip.rotation.z=.1;FG.add(drip);
+    const gnMat=makePhy({color:0x080101,roughness:.05,clearcoat:1.0,clearcoatRoughness:.02,envMapIntensity:1.5});
+    for(let j=0;j<16;j++){
+      const a=(Math.PI*2/16)*j+(Math.random()-.5)*.5;
+      const drip=new THREE.Mesh(mkDripGeo(.18+Math.random()*.35,.06),gnMat);
+      const A=1.36, B=1.36*1.6;
+      drip.position.set(A*Math.cos(a), 1.25, B*Math.sin(a));
+      drip.rotation.y=Math.atan2(A*Math.sin(a),B*Math.cos(a))+Math.PI; drip.rotation.z=.08;FG.add(drip);
     }
-    FG.add(mkCyl(1.35,.14,crMat,1.25));
-    const cherryMat=makePhy({color:0x7A0010,roughness:.1,clearcoat:1,clearcoatRoughness:.04});
+    FG.add(mkCyl(1.30,.18,crMat,1.25));
+    const cherryMat=makePhy({color:0x7A0010,roughness:.05,clearcoat:1,clearcoatRoughness:.01,transmission:0.1});
     const stemMat=new THREE.MeshStandardMaterial({color:0x1A3A0A,roughness:.9});
-    for(let k=0;k<7;k++){
-      const ca=(k/7)*Math.PI*2;
-      const ch=new THREE.Mesh(new THREE.SphereGeometry(.14,16,16),cherryMat);
-      ch.position.set(Math.cos(ca)*.88,1.45,Math.sin(ca)*.88);FG.add(ch);
-      const st=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.18,8),stemMat);
-      st.position.set(Math.cos(ca)*.88,1.62,Math.sin(ca)*.88);
-      st.rotation.z=.28+Math.random()*.2;FG.add(st);
+    for(let k=0;k<8;k++){
+      const ca=(k/8)*Math.PI*2;
+      const ch=new THREE.Mesh(new THREE.SphereGeometry(.16,24,24),cherryMat);
+      const A=0.75, B=0.75*1.6;
+      ch.position.set(A*Math.cos(ca), 1.5, B*Math.sin(ca));FG.add(ch);
+      const st=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.25,8),stemMat);
+      st.position.set(A*Math.cos(ca), 1.65, B*Math.sin(ca));
+      st.rotation.z=.3+Math.random()*.2; st.rotation.y = ca;FG.add(st);
     }
-    const cc=new THREE.Mesh(new THREE.SphereGeometry(.16,16,16),cherryMat);
-    cc.position.set(0,1.47,0);FG.add(cc);
+    const cc=new THREE.Mesh(new THREE.SphereGeometry(.18,24,24),cherryMat);
+    cc.position.set(0,1.54,0);FG.add(cc);
   }
 
   G.add(FG);
