@@ -202,7 +202,8 @@ const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,120);
 camera.position.set(0,3.6,13.5);
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
 renderer.setSize(innerWidth,innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+// OPTIMIZATION: Capped pixel ratio at 1.5 to save massive rendering overhead on mobile
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -215,13 +216,13 @@ renderer.physicallyCorrectLights=true;
 (function buildEnv(){
   const es=new THREE.Scene();
   // Dome
-  const dc=document.createElement('canvas');dc.width=512;dc.height=512;
+  const dc=document.createElement('canvas');dc.width=256;dc.height=256; // Reduced resolution
   const dctx=dc.getContext('2d');
-  const gr=dctx.createRadialGradient(256,180,10,256,256,400);
+  const gr=dctx.createRadialGradient(128,90,5,128,128,200);
   gr.addColorStop(0,'#fff9e8');gr.addColorStop(.3,'#d4a850');gr.addColorStop(.65,'#3d2810');gr.addColorStop(1,'#080402');
-  dctx.fillStyle=gr;dctx.fillRect(0,0,512,512);
+  dctx.fillStyle=gr;dctx.fillRect(0,0,256,256);
   const bgMat=new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(dc),side:THREE.BackSide});
-  es.add(new THREE.Mesh(new THREE.SphereGeometry(38,32,16),bgMat));
+  es.add(new THREE.Mesh(new THREE.SphereGeometry(38,16,8),bgMat));
   // Softboxes
   [[10,12,-4,0xfffde8],[- 10,6,7,0xd0e0ff],[0,5,-14,0xffcc88],[5,-2,8,0xff8830]].forEach(([x,y,z,c])=>{
     const m=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshBasicMaterial({color:c}));
@@ -239,7 +240,8 @@ renderer.physicallyCorrectLights=true;
 scene.add(new THREE.AmbientLight(0xfff8ee,.62));
 const keyLight=new THREE.SpotLight(0xfffcf0,9,0,Math.PI/4.2,.38,1.1);
 keyLight.position.set(4,12,5);keyLight.castShadow=true;
-keyLight.shadow.mapSize.width=keyLight.shadow.mapSize.height=2048;
+// OPTIMIZATION: Lowered shadow map resolution from 2048 to 1024
+keyLight.shadow.mapSize.width=keyLight.shadow.mapSize.height=1024;
 keyLight.shadow.camera.near=.5;keyLight.shadow.camera.far=42;
 keyLight.shadow.bias=-.0002;keyLight.shadow.radius=3.5;
 scene.add(keyLight);scene.add(keyLight.target);
@@ -251,27 +253,27 @@ const bounceLight=new THREE.PointLight(0xffa550,2.6,14,2);
 bounceLight.position.set(0,-.4,3);scene.add(bounceLight);
 
 // ══════════════════════════════════════
-// TEXTURES
+// TEXTURES (Optimized loops to prevent UI freezing)
 // ══════════════════════════════════════
 function makeBumpCanvas(w,h,fn){const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);return new THREE.CanvasTexture(c);}
 
-const flanBump=makeBumpCanvas(512,512,(ctx,w,h)=>{
+const flanBump=makeBumpCanvas(256,256,(ctx,w,h)=>{
   ctx.fillStyle='#808080';ctx.fillRect(0,0,w,h);
-  for(let i=0;i<55000;i++){const g=128+Math.round((Math.random()-.5)*30);ctx.fillStyle=`rgb(${g},${g},${g})`;ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*.9,0,7);ctx.fill();}
-  for(let j=0;j<55;j++){const y=Math.random()*h;ctx.strokeStyle=`rgba(148,148,148,.16)`;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y+(Math.random()*4-2));ctx.stroke();}
+  for(let i=0;i<10000;i++){const g=128+Math.round((Math.random()-.5)*30);ctx.fillStyle=`rgb(${g},${g},${g})`;ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*.9,0,7);ctx.fill();}
+  for(let j=0;j<30;j++){const y=Math.random()*h;ctx.strokeStyle=`rgba(148,148,148,.16)`;ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y+(Math.random()*4-2));ctx.stroke();}
 });
 flanBump.wrapS=flanBump.wrapT=THREE.RepeatWrapping;flanBump.repeat.set(4,4);
 
-const caramelNorm=makeBumpCanvas(256,256,(ctx,w,h)=>{
+const caramelNorm=makeBumpCanvas(128,128,(ctx,w,h)=>{
   ctx.fillStyle='#7f7fff';ctx.fillRect(0,0,w,h);
-  for(let i=0;i<7000;i++){const r=120+Math.round(Math.random()*28),g2=120+Math.round(Math.random()*28);ctx.fillStyle=`rgb(${r},${g2},255)`;ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*2.2,0,7);ctx.fill();}
+  for(let i=0;i<2000;i++){const r=120+Math.round(Math.random()*28),g2=120+Math.round(Math.random()*28);ctx.fillStyle=`rgb(${r},${g2},255)`;ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*2.2,0,7);ctx.fill();}
 });
 caramelNorm.wrapS=caramelNorm.wrapT=THREE.RepeatWrapping;caramelNorm.repeat.set(2,2);
 
-const metalBump=makeBumpCanvas(512,512,(ctx,w,h)=>{
+const metalBump=makeBumpCanvas(256,256,(ctx,w,h)=>{
   ctx.fillStyle='#808080';ctx.fillRect(0,0,w,h);
-  for(let i=0;i<14000;i++){ctx.fillStyle='#8a8a8a';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*28+4,.8);}
-  for(let i=0;i<5000;i++){ctx.fillStyle='#797979';ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*1.2,0,7);ctx.fill();}
+  for(let i=0;i<4000;i++){ctx.fillStyle='#8a8a8a';ctx.fillRect(Math.random()*w,Math.random()*h,Math.random()*28+4,.8);}
+  for(let i=0;i<1000;i++){ctx.fillStyle='#797979';ctx.beginPath();ctx.arc(Math.random()*w,Math.random()*h,Math.random()*1.2,0,7);ctx.fill();}
 });
 metalBump.wrapS=metalBump.wrapT=THREE.RepeatWrapping;metalBump.repeat.set(2,2);
 
@@ -303,8 +305,10 @@ function makePhy(o){
 
 // ══════════════════════════════════════
 // OVAL FLAN GEOMETRY (llanera mold)
+// OPTIMIZATION: Dropped segments from 128 to 48 for mobile performance
 // ══════════════════════════════════════
-const OVAL_Z=1.62; // classic llanera aspect ratio
+const OVAL_Z=1.62; 
+const LATHE_SEGMENTS = 48;
 
 function mkLlaneraGeo(){
   const pts=[
@@ -315,7 +319,7 @@ function mkLlaneraGeo(){
     new THREE.Vector2(2.28,  .55),new THREE.Vector2(2.38,  .52),
     new THREE.Vector2(2.42,  .44),new THREE.Vector2(2.40,  .36)
   ];
-  const g=new THREE.LatheGeometry(pts,128);
+  const g=new THREE.LatheGeometry(pts,LATHE_SEGMENTS);
   g.scale(1,1,OVAL_Z);return g;
 }
 function mkFlanBodyGeo(){
@@ -327,7 +331,7 @@ function mkFlanBodyGeo(){
     new THREE.Vector2(1.40,  .54),new THREE.Vector2(.80,   .60),
     new THREE.Vector2(0,     .62)
   ];
-  const g=new THREE.LatheGeometry(pts,128);
+  const g=new THREE.LatheGeometry(pts,LATHE_SEGMENTS);
   g.scale(1,1,OVAL_Z);return g;
 }
 function mkCaramelTopGeo(){
@@ -337,7 +341,7 @@ function mkCaramelTopGeo(){
     new THREE.Vector2(1.45, .565),new THREE.Vector2(1.70, .546),
     new THREE.Vector2(1.85, .522),new THREE.Vector2(1.92, .506)
   ];
-  const g=new THREE.LatheGeometry(pts,128);
+  const g=new THREE.LatheGeometry(pts,LATHE_SEGMENTS);
   g.scale(1,1,OVAL_Z);
   const pos=g.attributes.position;
   for(let i=0;i<pos.count;i++){
@@ -355,7 +359,7 @@ function mkDripGeo(len,wid){
     new THREE.Vector2(wid*.65,-len*.7),new THREE.Vector2(wid*.25,-len),
     new THREE.Vector2(0,-len)
   ];
-  return new THREE.LatheGeometry(pts,20);
+  return new THREE.LatheGeometry(pts,12);
 }
 
 // Serving plate profile
@@ -367,19 +371,33 @@ function mkPlate(){
     new THREE.Vector2(3.22,.32),new THREE.Vector2(3.12,.48),
     new THREE.Vector2(2.92,.54)
   ];
-  return new THREE.LatheGeometry(pts,128);
+  return new THREE.LatheGeometry(pts,LATHE_SEGMENTS);
 }
 
 function mkCyl(r,h,mat,y){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,128),mat);
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,LATHE_SEGMENTS),mat);
   m.scale.set(1,1,OVAL_Z);m.position.y=y+h/2;m.castShadow=true;m.receiveShadow=true;return m;
 }
+
+// ══════════════════════════════════════
+// OPTIMIZATION: CACHED GEOMETRIES
+// Generating these once instead of duplicating them 6 times!
+// ══════════════════════════════════════
+const sharedLlaneraGeo = mkLlaneraGeo();
+const sharedPlateGeo = mkPlate();
+const sharedFlanGeo = mkFlanBodyGeo();
+const sharedTopGeo = mkCaramelTopGeo();
+const sharedWellGeo = new THREE.CylinderGeometry(2.42*.8,2.42*.8,.03,LATHE_SEGMENTS);
+const sharedShadowGeo = new THREE.CircleGeometry(2.8,48);
+sharedShadowGeo.scale(1,1,1.62);
 
 // ══════════════════════════════════════
 // SHARED MATERIALS
 // ══════════════════════════════════════
 const llaneraMat=makePhy({color:0xDDDDD0,roughness:.26,metalness:.84,clearcoat:.5,clearcoatRoughness:.18,bumpMap:metalBump,bumpScale:.003,envMapIntensity:1.7});
 const plateMat=makePhy({color:0xF8F4EE,roughness:.16,metalness:0,clearcoat:.92,clearcoatRoughness:.05,envMapIntensity:1.3});
+const wellMat=makePhy({color:0xEEE4CC,roughness:.22,clearcoat:.62,clearcoatRoughness:.10,transparent:true,opacity:.48,depthWrite:false});
+const shadowMat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.52,depthWrite:false});
 
 // ══════════════════════════════════════
 // TABLE
@@ -397,19 +415,16 @@ DS.forEach((d,i)=>{
   G.position.x=i*8.0;
 
   // Shadow
-  const sdGeo=new THREE.CircleGeometry(2.8,128);
-  sdGeo.scale(1,1,1.62);
-  const sd=new THREE.Mesh(sdGeo,new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.52,depthWrite:false}));
+  const sd=new THREE.Mesh(sharedShadowGeo, shadowMat);
   sd.rotation.x=-Math.PI/2;sd.position.y=-.715;G.add(sd);
 
   // Serving plate
-  const plate=new THREE.Mesh(mkPlate(),plateMat);
+  const plate=new THREE.Mesh(sharedPlateGeo,plateMat);
   plate.position.y=-.72;plate.scale.setScalar(.8);plate.castShadow=true;plate.receiveShadow=true;
   G.add(plate);
 
-  // Plate inner tint (caramel reflection)
-  const wellMat=makePhy({color:0xEEE4CC,roughness:.22,clearcoat:.62,clearcoatRoughness:.10,transparent:true,opacity:.48,depthWrite:false});
-  const well=new THREE.Mesh(new THREE.CylinderGeometry(2.42*.8,2.42*.8,.03,128),wellMat);
+  // Plate inner tint
+  const well=new THREE.Mesh(sharedWellGeo,wellMat);
   well.position.y=-.70;G.add(well);
 
   const FG=new THREE.Group();
@@ -429,19 +444,19 @@ DS.forEach((d,i)=>{
     });
 
     // Llanera tin
-    const llanera=new THREE.Mesh(mkLlaneraGeo(),llaneraMat);
+    const llanera=new THREE.Mesh(sharedLlaneraGeo,llaneraMat);
     llanera.position.y=-.02;llanera.castShadow=true;llanera.receiveShadow=true;FG.add(llanera);
 
     // Flan body
-    const flan=new THREE.Mesh(mkFlanBodyGeo(),bodyMat);
+    const flan=new THREE.Mesh(sharedFlanGeo,bodyMat);
     flan.castShadow=true;flan.receiveShadow=true;FG.add(flan);
 
     // Glossy caramel top
-    const top=new THREE.Mesh(mkCaramelTopGeo(),syrupMat);FG.add(top);
+    const top=new THREE.Mesh(sharedTopGeo,syrupMat);FG.add(top);
 
     // Oval-perimeter drips
-    for(let j=0;j<22;j++){
-      const ang=(Math.PI*2/22)*j+(Math.random()-.5)*.38;
+    for(let j=0;j<16;j++){ // Reduced from 22
+      const ang=(Math.PI*2/16)*j+(Math.random()-.5)*.38;
       const drip=new THREE.Mesh(mkDripGeo(.14+Math.random()*.58,.052+Math.random()*.038),syrupMat);
       const A=1.93,B=1.93*OVAL_Z;
       drip.position.set(A*Math.cos(ang)*.99,.505,B*Math.sin(ang)*.99);
@@ -452,11 +467,11 @@ DS.forEach((d,i)=>{
 
     // Subsurface glow
     const glowMat=makePhy({color:d.glowColor,transparent:true,opacity:.11,roughness:1,side:THREE.BackSide});
-    const glow=new THREE.Mesh(new THREE.SphereGeometry(1.18,32,24),glowMat);
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(1.18,16,12),glowMat); // Reduced polys
     glow.scale.set(1,.52,OVAL_Z);glow.position.y=.22;FG.add(glow);
 
     // Specular highlight
-    const hl=new THREE.Mesh(new THREE.SphereGeometry(.52,20,20),makePhy({color:0xffffff,transparent:true,opacity:.055,roughness:0,clearcoat:1,depthWrite:false}));
+    const hl=new THREE.Mesh(new THREE.SphereGeometry(.52,12,12),makePhy({color:0xffffff,transparent:true,opacity:.055,roughness:0,clearcoat:1,depthWrite:false}));
     hl.position.set(.3,.72,.32*OVAL_Z);FG.add(hl);
 
   } else if(d.type==='graham'){
@@ -464,21 +479,21 @@ DS.forEach((d,i)=>{
     FG.add(mkCyl(1.60,.40,makePhy({color:0xF0C010,roughness:.28,clearcoat:.40,clearcoatRoughness:.24}),.29));
     FG.add(mkCyl(1.58,.36,makePhy({color:0xFFFDF8,roughness:.24,clearcoat:.54,clearcoatRoughness:.16}),.70));
     const slMat=makePhy({color:0xFFB018,roughness:.11,clearcoat:.93,clearcoatRoughness:.04,transparent:true,opacity:.83,envMapIntensity:1.7});
-    for(let k=0;k<9;k++){const sa=(k/9)*Math.PI*2;const s=new THREE.Mesh(new THREE.SphereGeometry(.32,20,12,0,Math.PI*2,0,Math.PI*.42),slMat);s.position.set(Math.cos(sa)*.50,1.05,Math.sin(sa)*.50*OVAL_Z);s.rotation.z=Math.PI;s.rotation.y=sa;FG.add(s);}
+    for(let k=0;k<9;k++){const sa=(k/9)*Math.PI*2;const s=new THREE.Mesh(new THREE.SphereGeometry(.32,12,8,0,Math.PI*2,0,Math.PI*.42),slMat);s.position.set(Math.cos(sa)*.50,1.05,Math.sin(sa)*.50*OVAL_Z);s.rotation.z=Math.PI;s.rotation.y=sa;FG.add(s);}
     const crMat=new THREE.MeshStandardMaterial({color:0x8B5E2A,roughness:.95});
-    for(let k=0;k<30;k++){const ca=Math.random()*Math.PI*2,cr=Math.random()*1.25;const c=new THREE.Mesh(new THREE.SphereGeometry(.04+Math.random()*.04,8,8),crMat);c.position.set(Math.cos(ca)*cr,.99,Math.sin(ca)*cr*OVAL_Z);FG.add(c);}
+    for(let k=0;k<18;k++){const ca=Math.random()*Math.PI*2,cr=Math.random()*1.25;const c=new THREE.Mesh(new THREE.SphereGeometry(.04+Math.random()*.04,6,6),crMat);c.position.set(Math.cos(ca)*cr,.99,Math.sin(ca)*cr*OVAL_Z);FG.add(c);}
 
   } else if(d.type==='blackforest'){
     const chMat=makePhy({color:0x120402,roughness:.82,clearcoat:.04,bumpMap:flanBump,bumpScale:.022});
     const crMat=makePhy({color:0xFFFCF8,roughness:.21,clearcoat:.44,clearcoatRoughness:.19});
     FG.add(mkCyl(1.32,.5,chMat,.0));FG.add(mkCyl(1.28,.22,crMat,.51));FG.add(mkCyl(1.32,.5,chMat,.74));
     const gnMat=makePhy({color:0x080101,roughness:.04,clearcoat:1,clearcoatRoughness:.02,envMapIntensity:1.9});
-    for(let j=0;j<18;j++){const a=(Math.PI*2/18)*j+(Math.random()-.5)*.46;const drip=new THREE.Mesh(mkDripGeo(.16+Math.random()*.34,.058),gnMat);const A=1.30,B=1.30*OVAL_Z;drip.position.set(A*Math.cos(a),1.26,B*Math.sin(a));drip.rotation.y=Math.atan2(A*Math.sin(a),B*Math.cos(a))+Math.PI;drip.rotation.z=.07;FG.add(drip);}
+    for(let j=0;j<12;j++){const a=(Math.PI*2/12)*j+(Math.random()-.5)*.46;const drip=new THREE.Mesh(mkDripGeo(.16+Math.random()*.34,.058),gnMat);const A=1.30,B=1.30*OVAL_Z;drip.position.set(A*Math.cos(a),1.26,B*Math.sin(a));drip.rotation.y=Math.atan2(A*Math.sin(a),B*Math.cos(a))+Math.PI;drip.rotation.z=.07;FG.add(drip);}
     FG.add(mkCyl(1.24,.18,crMat,1.26));
     const cherryMat=makePhy({color:0x7A0010,roughness:.04,clearcoat:1,clearcoatRoughness:.01,transparent:true,opacity:.97,envMapIntensity:1.9});
     const stemMat=new THREE.MeshStandardMaterial({color:0x1A3A0A,roughness:.9});
-    for(let k=0;k<8;k++){const ca=(k/8)*Math.PI*2;const A=.70,B=.70*OVAL_Z;const ch=new THREE.Mesh(new THREE.SphereGeometry(.16,24,24),cherryMat);ch.position.set(A*Math.cos(ca),1.52,B*Math.sin(ca));FG.add(ch);const st=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.26,8),stemMat);st.position.set(A*Math.cos(ca),1.66,B*Math.sin(ca));st.rotation.z=.28+Math.random()*.22;st.rotation.y=ca;FG.add(st);}
-    const cc=new THREE.Mesh(new THREE.SphereGeometry(.18,24,24),cherryMat);cc.position.set(0,1.56,0);FG.add(cc);
+    for(let k=0;k<6;k++){const ca=(k/6)*Math.PI*2;const A=.70,B=.70*OVAL_Z;const ch=new THREE.Mesh(new THREE.SphereGeometry(.16,16,16),cherryMat);ch.position.set(A*Math.cos(ca),1.52,B*Math.sin(ca));FG.add(ch);const st=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.26,6),stemMat);st.position.set(A*Math.cos(ca),1.66,B*Math.sin(ca));st.rotation.z=.28+Math.random()*.22;st.rotation.y=ca;FG.add(st);}
+    const cc=new THREE.Mesh(new THREE.SphereGeometry(.18,16,16),cherryMat);cc.position.set(0,1.56,0);FG.add(cc);
   }
 
   G.add(FG);G.scale.set(.001,.001,.001);
@@ -560,19 +575,14 @@ function animate(){
   groups.forEach(({G,FG,sd},i)=>{
     const dist=Math.abs(i-active);
 
-    // Scale active larger
     if(entered&&G.scale.x>.08&&!gsap.isTweening(G.scale)){
       const ts=Math.max(.40,1-dist*.18);
       G.scale.setScalar(G.scale.x+(ts-G.scale.x)*.052);
     }
 
-    // Float bob
     G.position.y=Math.sin(t*1.42+i*1.28)*.068;
-
-    // Slow spin
     FG.rotation.y+=.00135;
 
-    // Parallax tilt on active
     if(i===active){
       FG.rotation.x+=((-smoothMY*.19)-FG.rotation.x)*.062;
       FG.rotation.z+=((smoothMX*.058)-FG.rotation.z)*.062;
@@ -581,7 +591,6 @@ function animate(){
       FG.rotation.x*=.88;FG.rotation.z*=.88;
     }
 
-    // Shadow fades with distance
     if(sd) sd.material.opacity=Math.max(.08,.52-dist*.17);
   });
 
@@ -591,7 +600,8 @@ animate();
 
 window.addEventListener('resize',()=>{
   camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
-  renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setSize(innerWidth,innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 });
 </script>
 </body>
