@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>LechePlan — Silky. Rich. Irresistible.</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Playfair+Display:ital,wght@0,400;1,400&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#060402;cursor:none;font-family:'Cormorant Garamond',serif}
+#cur{position:fixed;width:8px;height:8px;background:#F0D080;border-radius:50%;pointer-events:none;z-index:9999;transform:translate(-50%,-50%);mix-blend-mode:screen;box-shadow:0 0 12px #F0D080,0 0 26px rgba(240,208,128,.55)}
+#cur2{position:fixed;width:32px;height:32px;border:1px solid rgba(201,168,76,.38);border-radius:50%;pointer-events:none;z-index:9998;transform:translate(-50%,-50%)}
+#webgl{position:fixed;inset:0;display:block;z-index:1}
+#vig{position:fixed;inset:0;z-index:8;pointer-events:none;background:radial-gradient(ellipse at 50% 48%,transparent 26%,rgba(6,4,2,.52) 64%,rgba(6,4,2,.92) 100%)}
+#hdr{position:fixed;top:0;left:0;right:0;padding:34px 48px;display:flex;justify-content:space-between;align-items:flex-start;background:linear-gradient(to bottom,rgba(6,4,2,.97) 0%,transparent 100%);z-index:20;opacity:0;transition:opacity 1.3s ease}
+#hdr.vis{opacity:1}
+#logo{font-family:'Cinzel',serif;font-size:clamp(20px,3vw,40px);font-weight:700;letter-spacing:.2em;color:#F0D080;text-shadow:0 0 40px rgba(201,168,76,.8),0 0 80px rgba(201,168,76,.22)}
+#tag{font-family:'Playfair Display',serif;font-style:italic;font-size:clamp(8px,.9vw,11px);letter-spacing:.32em;color:rgba(240,208,128,.34);margin-top:4px}
+nav{display:flex;flex-direction:column;align-items:flex-end;gap:4px;pointer-events:all}
+nav a{font-family:'Cinzel',serif;font-size:8px;letter-spacing:.45em;text-transform:uppercase;color:rgba(240,208,128,.24);text-decoration:none;transition:color .3s;cursor:none}
+nav a:hover{color:rgba(240,208,128,.9)}
+#info{position:fixed;bottom:0;left:0;right:0;padding:0 48px 34px;background:linear-gradient(to top,rgba(6,4,2,.97) 0%,transparent 100%);display:flex;justify-content:space-between;align-items:flex-end;z-index:20;opacity:0;transition:opacity 1.3s ease}
+#info.vis{opacity:1}
+#dname{font-family:'Playfair Display',serif;font-size:clamp(16px,2.6vw,34px);color:#F0D080;text-shadow:0 0 24px rgba(201,168,76,.55);letter-spacing:.04em;margin-bottom:5px;transition:opacity .38s,transform .38s}
+#ddesc{font-size:clamp(10px,1vw,13px);color:rgba(245,236,215,.38);line-height:1.85;max-width:320px;letter-spacing:.02em;transition:opacity .38s,transform .38s}
+#hints{font-size:8px;letter-spacing:.35em;color:rgba(240,208,128,.16);text-transform:uppercase;text-align:right;line-height:2.5;pointer-events:none}
+#menu{position:fixed;right:0;top:50%;transform:translateY(-50%);padding:24px 24px 24px 16px;z-index:20;pointer-events:all;opacity:0;transition:opacity 1.3s ease}
+#menu.vis{opacity:1}
+.ml{font-family:'Cinzel',serif;font-size:7px;letter-spacing:.5em;color:rgba(201,168,76,.28);text-transform:uppercase;margin-bottom:12px}
+.mi{display:flex;align-items:center;gap:8px;padding:7px 0;cursor:none;border-bottom:1px solid rgba(201,168,76,.05);transition:all .3s}
+.mi:last-child{border-bottom:none}
+.md{width:5px;height:5px;border-radius:50%;flex-shrink:0;transition:all .35s}
+.mi:hover .md,.mi.on .md{transform:scale(2.4)}
+.mn{font-family:'Cormorant Garamond',serif;font-size:11px;letter-spacing:.14em;color:rgba(245,236,215,.28);transition:color .3s;white-space:nowrap}
+.mi.on .mn,.mi:hover .mn{color:#F0D080}
+#loading{position:fixed;inset:0;z-index:100;background:#060402;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;transition:opacity 1.7s ease}
+#loading.out{opacity:0;pointer-events:none}
+#ilogo{font-family:'Cinzel',serif;font-size:clamp(28px,5.5vw,64px);font-weight:700;letter-spacing:.22em;color:#F0D080;animation:glow 2.8s ease-in-out infinite}
+@keyframes glow{0%,100%{text-shadow:0 0 28px rgba(201,168,76,.28)}50%{text-shadow:0 0 72px rgba(201,168,76,.98),0 0 140px rgba(201,168,76,.28)}}
+#isub{font-family:'Playfair Display',serif;font-style:italic;font-size:13px;letter-spacing:.32em;color:rgba(240,208,128,.36)}
+#lbar{width:160px;height:1px;background:rgba(201,168,76,.1);overflow:hidden;margin-top:4px}
+#lfill{height:100%;width:0%;background:linear-gradient(to right,#8B6010,#F0D080,#C9A84C);box-shadow:0 0 8px #C9A84C;transition:width .06s linear}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+<div id="cur"></div><div id="cur2"></div>
+<div id="loading">
+  <div id="ilogo">LechePlan</div>
+  <div id="isub">Silky · Rich · Irresistible</div>
+  <div id="lbar"><div id="lfill"></div></div>
+</div>
+<canvas id="webgl"></canvas>
+<div id="vig"></div>
+<div id="hdr">
+  <div><div id="logo">LechePlan</div><div id="tag">Artisanal Filipino Desserts · Est. 1987</div></div>
+  <nav><a href="#">Our Story</a><a href="#">Order</a><a href="#">Locations</a><a href="#">Gift</a></nav>
+</div>
+<div id="menu">
+  <div class="ml">Collection</div>
+  <div class="mi on" data-i="0"><div class="md" style="background:#C9A84C;box-shadow:0 0 6px #C9A84C"></div><div class="mn">Leche Flan</div></div>
+  <div class="mi" data-i="1"><div class="md" style="background:#9B6FD0;box-shadow:0 0 6px #9B6FD0"></div><div class="mn">Ube Custard</div></div>
+  <div class="mi" data-i="2"><div class="md" style="background:#A855F7;box-shadow:0 0 6px #A855F7"></div><div class="mn">Ube Leche Flan</div></div>
+  <div class="mi" data-i="3"><div class="md" style="background:#FBBF24;box-shadow:0 0 6px #FBBF24"></div><div class="mn">Mango Graham</div></div>
+  <div class="mi" data-i="4"><div class="md" style="background:#F59E0B;box-shadow:0 0 6px #F59E0B"></div><div class="mn">Mango de Leche</div></div>
+  <div class="mi" data-i="5"><div class="md" style="background:#4A1A0A;box-shadow:0 0 6px #7C3D2A"></div><div class="mn">Black Forest</div></div>
+</div>
+<div id="info">
+  <div><div id="dname">Classic Leche Flan</div><div id="ddesc">Slow-steamed for 3 hours. Velvety egg custard crowned with molten amber caramel — our signature since 1987.</div></div>
+  <div id="hints">Scroll · Arrow keys<br>Drag to rotate</div>
+</div>
+
+<script>
+// ── GRAIN OVERLAY ──
+(function(){
+  const c=document.createElement('canvas');
+  c.width=200;c.height=200;
+  Object.assign(c.style,{position:'fixed',inset:'0',width:'100%',height:'100%',zIndex:'9',pointerEvents:'none',opacity:'.038'});
+  document.body.appendChild(c);
+  const ctx=c.getContext('2d');
+  function tick(){
+    const d=ctx.createImageData(200,200);
+    for(let i=0;i<d.data.length;i+=4){const v=Math.random()*255|0;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255;}
+    ctx.putImageData(d,0,0);
+  }
+  tick();setInterval(tick,55);
+})();
+
+// ── CURSOR ──
+const cur=document.getElementById('cur'),cur2=document.getElementById('cur2');
+let mx=innerWidth/2,my=innerHeight/2,rx=mx,ry=my;
+let mouseNormX=0,mouseNormY=0,smoothMX=0,smoothMY=0;
+let useGyro=false;
+
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  cur.style.left=mx+'px';cur.style.top=my+'px';
+  mouseNormX=(mx/innerWidth)*2-1;
+  mouseNormY=-(my/innerHeight)*2+1;
+});
+
+// ── GYROSCOPE ──
+function setupGyro(){
+  window.addEventListener('deviceorientation',e=>{
+    if(e.beta===null||e.gamma===null)return;
+    useGyro=true;
+    mouseNormX=Math.max(-1,Math.min(1,e.gamma/35));
+    mouseNormY=Math.max(-1,Math.min(1,-(e.beta-30)/40));
+  },true);
+}
+if(typeof DeviceOrientationEvent!=='undefined'){
+  if(typeof DeviceOrientationEvent.requestPermission==='function'){
+    document.addEventListener('touchstart',function h(){
+      DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted')setupGyro();}).catch(()=>{});
+      document.removeEventListener('touchstart',h);
+    },{once:true});
+  } else {
+    setupGyro();
+  }
+}
+
+// Touch drag parallax fallback
+let tSX=0,tSY=0;
+document.addEventListener('touchstart',e=>{tSX=e.touches[0].clientX;tSY=e.touches[0].clientY;},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(useGyro)return;
+  mouseNormX=Math.max(-1,Math.min(1,(e.touches[0].clientX-tSX)/100));
+  mouseNormY=Math.max(-1,Math.min(1,-(e.touches[0].clientY-tSY)/100));
+},{passive:true});
+document.addEventListener('touchend',()=>{if(!useGyro){mouseNormX*=0.35;mouseNormY*=0.35;}},{passive:true});
+
+(function lc(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;cur2.style.left=rx+'px';cur2.style.top=ry+'px';requestAnimationFrame(lc);})();
+
+// ── LOADING ──
+let prog=0;
+const lfill=document.getElementById('lfill');
+const li=setInterval(()=>{prog+=Math.random()*4+2.5;if(prog>=100){prog=100;clearInterval(li);}lfill.style.width=prog+'%';},40);
+
+// ── DATA ──
+const DS=[
+  {name:'Classic Leche Flan',desc:'Slow-steamed for 3 hours. Velvety egg custard crowned with molten amber caramel — our signature since 1987.',type:'flan',bodyColor:0xD4A838,syrupColor:0x6E1E00},
+  {name:'Ube Custard',desc:'Vibrant purple yam from the Cordilleras, whipped into a silky cloud of deep floral sweetness.',type:'ube',bodyColor:0x6E38A8,syrupColor:0x2E0E60},
+  {name:'Ube Leche Flan',desc:'The best of both worlds — rich purple ube beneath golden caramel custard, a Filipino masterpiece.',type:'ubeflan',bodyColor:0x8040A8,syrupColor:0x7A2C00},
+  {name:'Mango Graham Float',desc:'Sun-ripened Philippine carabao mangoes, crushed graham, and cloud cream — layered tropical perfection.',type:'graham',bodyColor:0xE8B810,syrupColor:0xB46000},
+  {name:'Mango de Leche',desc:'Golden custard kissed by carabao mango — sweet, tropical, unmistakably Filipino.',type:'mango',bodyColor:0xE8A020,syrupColor:0x904800},
+  {name:'Black Forest',desc:'Dark Benguet chocolate layers, kirsch-soaked cherries, and hand-piped Chantilly cream.',type:'blackforest',bodyColor:0x140602,syrupColor:0x060200}
+];
+
+let active=0;
+function focusOn(i){
+  active=Math.max(0,Math.min(DS.length-1,i));
+  const dn=document.getElementById('dname'),dd=document.getElementById('ddesc');
+  dn.style.opacity='0';dn.style.transform='translateY(8px)';
+  dd.style.opacity='0';dd.style.transform='translateY(8px)';
+  setTimeout(()=>{
+    dn.textContent=DS[active].name;dd.textContent=DS[active].desc;
+    dn.style.opacity='1';dn.style.transform='translateY(0)';
+    dd.style.opacity='1';dd.style.transform='translateY(0)';
+  },240);
+  document.querySelectorAll('.mi').forEach((el,idx)=>el.classList.toggle('on',idx===active));
+}
+document.querySelectorAll('.mi').forEach(el=>el.addEventListener('click',()=>focusOn(+el.dataset.i)));
+document.addEventListener('wheel',e=>focusOn(active+(e.deltaY>0?1:-1)),{passive:true});
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key==='ArrowDown')focusOn(active+1);if(e.key==='ArrowLeft'||e.key==='ArrowUp')focusOn(active-1);});
+let swipeX=0;
+document.addEventListener('touchstart',e=>{swipeX=e.touches[0].clientX;},{passive:true});
+document.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-swipeX;if(Math.abs(dx)>55)focusOn(active+(dx<0?1:-1));},{passive:true});
+
+// ── THREE SETUP ──
+const canvas=document.getElementById('webgl');
+const scene=new THREE.Scene();
+scene.fog=new THREE.FogExp2(0x060402,0.038);
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,0.1,120);
+camera.position.set(0,3.2,13);
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.25;
+renderer.physicallyCorrectLights=true;
+
+// ── LIGHTS ──
+scene.add(new THREE.AmbientLight(0xfff4e0,0.65));
+const keyLight=new THREE.SpotLight(0xfffbe8,5,0,Math.PI/5,0.35,1.5);
+keyLight.position.set(3,11,5);keyLight.castShadow=true;
+keyLight.shadow.mapSize.width=2048;keyLight.shadow.mapSize.height=2048;
+keyLight.shadow.bias=-0.0002;
+scene.add(keyLight);
+const rimLight=new THREE.SpotLight(0xffd888,3,0,Math.PI/3.5,0.65,2);
+rimLight.position.set(-5,6,-6);scene.add(rimLight);
+const fillLight=new THREE.DirectionalLight(0xd0e4ff,0.75);
+fillLight.position.set(-8,2,4);scene.add(fillLight);
+const bounceLight=new THREE.PointLight(0xff9940,1.4,10,2);
+bounceLight.position.set(0,-1,2);scene.add(bounceLight);
+
+// ── TABLE ──
+const tMesh=new THREE.Mesh(new THREE.PlaneGeometry(70,16),new THREE.MeshPhysicalMaterial({color:0x0E0604,roughness:0.3,metalness:0,clearcoat:0.65,clearcoatRoughness:0.12}));
+tMesh.rotation.x=-Math.PI/2;tMesh.position.y=-0.83;tMesh.receiveShadow=true;scene.add(tMesh);
+
+// ── SAFE PHYSICAL MATERIAL (r128-compatible) ──
+// In r128, advanced props like thickness/attenuationColor/sheenColor/sheenRoughness
+// exist on the instance but must NOT be passed in constructor.
+// We set them directly after construction, guarded by existence checks.
+function makePhy(o){
+  const m=new THREE.MeshPhysicalMaterial({
+    color:      o.color      !=null ? o.color      : 0xffffff,
+    roughness:  o.roughness  !=null ? o.roughness  : 0.5,
+    metalness:  o.metalness  !=null ? o.metalness  : 0,
+    clearcoat:  o.clearcoat  !=null ? o.clearcoat  : 0,
+    clearcoatRoughness: o.clearcoatRoughness!=null ? o.clearcoatRoughness : 0.1,
+    transparent:!!(o.transparent||(o.transmission>0)||(o.opacity!=null&&o.opacity<1)),
+    opacity:    o.opacity    !=null ? o.opacity     : 1,
+    side:       o.side       !=null ? o.side        : THREE.FrontSide,
+    depthWrite: o.depthWrite !=null ? o.depthWrite  : true
+  });
+  // Post-construction safe-sets
+  if(o.transmission!=null) m.transmission=o.transmission;
+  if(o.ior!=null)          m.ior=o.ior;
+  if(o.reflectivity!=null) m.reflectivity=o.reflectivity;
+  if(o.envMapIntensity!=null) m.envMapIntensity=o.envMapIntensity;
+  // sheen (all three exist in r128 MeshPhysicalMaterial)
+  if(o.sheen!=null){
+    m.sheen=o.sheen;
+    if(o.sheenColor!=null && m.sheenColor)  m.sheenColor.set(o.sheenColor);
+    if(o.sheenRoughness!=null && m.sheenRoughness!=null) m.sheenRoughness=o.sheenRoughness;
+  }
+  // thickness / attenuation — only set if prop exists on instance
+  if(o.thickness!=null         && 'thickness'          in m) m.thickness=o.thickness;
+  if(o.attenuationColor!=null  && m.attenuationColor)         m.attenuationColor.set(o.attenuationColor);
+  if(o.attenuationDistance!=null && 'attenuationDistance' in m) m.attenuationDistance=o.attenuationDistance;
+  return m;
+}
+
+// ── GEOMETRY BUILDERS ──
+function mkFlanGeo(){
+  const p=[
+    new THREE.Vector2(0,-0.62),new THREE.Vector2(1.27,-0.62),
+    new THREE.Vector2(1.37,-0.52),new THREE.Vector2(1.31,0.08),
+    new THREE.Vector2(1.18,0.52),new THREE.Vector2(0.78,0.74),
+    new THREE.Vector2(0,0.78)
+  ];
+  return new THREE.LatheGeometry(p,80);
+}
+function mkPoolGeo(){
+  const g=new THREE.CylinderGeometry(1.15,1.15,0.11,80,3);
+  const pos=g.attributes.position;
+  for(let i=0;i<pos.count;i++){
+    const vx=pos.getX(i),vy=pos.getY(i),vz=pos.getZ(i),r=Math.hypot(vx,vz),a=Math.atan2(vz,vx);
+    if(r>0.5){const w=Math.sin(a*7+.3)*.055+Math.cos(a*4+1.1)*.035+Math.sin(a*11)*.012;pos.setX(i,vx*(1+w));pos.setZ(i,vz*(1+w));if(vy>0)pos.setY(i,vy+Math.sin(a*5)*.016+.008);}
+  }
+  g.computeVertexNormals();return g;
+}
+function mkDripGeo(len,wid){
+  const p=[
+    new THREE.Vector2(0,0),new THREE.Vector2(wid*.5,.04),
+    new THREE.Vector2(wid,0),new THREE.Vector2(wid*.88,-len*.38),
+    new THREE.Vector2(wid*.5,-len*.82),new THREE.Vector2(wid*.14,-len),
+    new THREE.Vector2(0,-len)
+  ];
+  return new THREE.LatheGeometry(p,14);
+}
+function mkCyl(r,h,mat,y){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,64),mat);m.position.y=y+h/2;m.castShadow=true;return m;}
+
+// ── SHARED MATS ──
+const plateMat=makePhy({color:0xF8F4EE,roughness:.07,metalness:0,clearcoat:.9,clearcoatRoughness:.09});
+const goldMat=new THREE.MeshStandardMaterial({color:0xC8A028,roughness:.18,metalness:.95});
+const dishMat=makePhy({color:0xffffff,roughness:.02,metalness:0,clearcoat:1,clearcoatRoughness:0,transparent:true,opacity:.16});
+const shadowMat=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.42});
+const plateGeo=new THREE.CylinderGeometry(2.75,2.35,.18,72);
+const rimGeo=new THREE.TorusGeometry(2.6,.018,12,72);
+const dishGeo=new THREE.CylinderGeometry(2.4,2.4,.01,72);
+const shadowGeo=new THREE.CircleGeometry(2.8,64);
+
+const groups=[];
+
+DS.forEach((d,i)=>{
+  const G=new THREE.Group();
+  G.position.x=i*7.5;
+
+  // plate assembly
+  const plate=new THREE.Mesh(plateGeo,plateMat);plate.position.y=-.72;plate.castShadow=true;plate.receiveShadow=true;G.add(plate);
+  const rim=new THREE.Mesh(rimGeo,goldMat);rim.position.y=-.63;rim.rotation.x=Math.PI/2;G.add(rim);
+  const dish=new THREE.Mesh(dishGeo,dishMat);dish.position.y=-.635;G.add(dish);
+  const sd=new THREE.Mesh(shadowGeo,shadowMat);sd.rotation.x=-Math.PI/2;sd.position.y=-.82;G.add(sd);
+
+  const FG=new THREE.Group();
+
+  if(['flan','ube','ubeflan','mango'].includes(d.type)){
+    const isUbe=d.type==='ube'||d.type==='ubeflan';
+
+    const bodyMat=makePhy({
+      color:d.bodyColor,roughness:.2,metalness:0,
+      clearcoat:.55,clearcoatRoughness:.14,
+      transmission:.06,ior:1.38,
+      sheen:isUbe?.35:0,
+      sheenColor:isUbe?0x9955ee:0xffffff,
+      sheenRoughness:.3
+    });
+    const syrupMat=makePhy({
+      color:d.syrupColor,roughness:.008,metalness:0,
+      clearcoat:1,clearcoatRoughness:.008,
+      transmission:.82,ior:1.50
+    });
+
+    const flan=new THREE.Mesh(mkFlanGeo(),bodyMat);flan.castShadow=true;flan.receiveShadow=true;FG.add(flan);
+    const pool=new THREE.Mesh(mkPoolGeo(),syrupMat);pool.position.y=.79;FG.add(pool);
+
+    for(let j=0;j<13;j++){
+      const ang=(Math.PI*2/13)*j+(Math.random()-.5)*.5;
+      const drip=new THREE.Mesh(mkDripGeo(.15+Math.random()*.42,.042+Math.random()*.028),syrupMat);
+      const r=1.17+Math.random()*.035;
+      drip.position.set(Math.cos(ang)*r,.79,Math.sin(ang)*r);
+      drip.rotation.y=ang+Math.PI;drip.rotation.z=.06+Math.random()*.1;FG.add(drip);
+    }
+
+    // subsurface glow
+    const glowMat=makePhy({color:isUbe?0xAA66FF:0xFFDD60,transparent:true,opacity:.11,roughness:1,side:THREE.BackSide});
+    const glow=new THREE.Mesh(new THREE.SphereGeometry(.72,32,32),glowMat);glow.position.y=.1;FG.add(glow);
+    // highlight sphere
+    const hlMat=makePhy({color:0xffffff,transparent:true,opacity:.08,roughness:0,clearcoat:1,clearcoatRoughness:0});
+    const hl=new THREE.Mesh(new THREE.SphereGeometry(.55,24,24),hlMat);hl.position.set(.3,.5,.3);FG.add(hl);
+
+  } else if(d.type==='graham'){
+    FG.add(mkCyl(2.0,.28,makePhy({color:0x3A2610,roughness:.55,clearcoat:.12}),.0));
+    FG.add(mkCyl(1.95,.42,makePhy({color:0xF0C010,roughness:.22,clearcoat:.55,clearcoatRoughness:.12}),.29));
+    FG.add(mkCyl(1.9,.38,makePhy({color:0xFFFDF8,roughness:.18,clearcoat:.7,clearcoatRoughness:.12}),.73));
+    const slMat=makePhy({color:0xFFB018,roughness:.28,clearcoat:.7,clearcoatRoughness:.1});
+    for(let k=0;k<7;k++){
+      const sa=(k/7)*Math.PI*2;
+      const s=new THREE.Mesh(new THREE.SphereGeometry(.3,16,8,0,Math.PI*2,0,Math.PI*.4),slMat);
+      s.position.set(Math.cos(sa)*.7,.98,Math.sin(sa)*.7);s.rotation.z=Math.PI;FG.add(s);
+    }
+    const crMat=new THREE.MeshStandardMaterial({color:0x8B5E2A,roughness:.9});
+    for(let k=0;k<20;k++){
+      const ca=Math.random()*Math.PI*2,cr=Math.random()*1.6;
+      const c=new THREE.Mesh(new THREE.SphereGeometry(.035+Math.random()*.038,6,6),crMat);
+      c.position.set(Math.cos(ca)*cr,.94,Math.sin(ca)*cr);FG.add(c);
+    }
+
+  } else if(d.type==='blackforest'){
+    const chMat=makePhy({color:0x120402,roughness:.62,clearcoat:.1});
+    const crMat=makePhy({color:0xFFFCF8,roughness:.2,clearcoat:.55,clearcoatRoughness:.18});
+    FG.add(mkCyl(1.38,.5,chMat,.0));
+    FG.add(mkCyl(1.32,.22,crMat,.51));
+    FG.add(mkCyl(1.38,.5,chMat,.74));
+    // ganache drips
+    const gnMat=makePhy({color:0x0A0202,roughness:.1,clearcoat:.95,clearcoatRoughness:.04});
+    for(let j=0;j<11;j++){
+      const a=(Math.PI*2/11)*j+(Math.random()-.5)*.5;
+      const drip=new THREE.Mesh(mkDripGeo(.14+Math.random()*.28,.05),gnMat);
+      drip.position.set(Math.cos(a)*1.36,1.24,Math.sin(a)*1.36);
+      drip.rotation.y=a+Math.PI;drip.rotation.z=.1;FG.add(drip);
+    }
+    FG.add(mkCyl(1.35,.14,crMat,1.25));
+    const cherryMat=makePhy({color:0x7A0010,roughness:.1,clearcoat:1,clearcoatRoughness:.04});
+    const stemMat=new THREE.MeshStandardMaterial({color:0x1A3A0A,roughness:.9});
+    for(let k=0;k<7;k++){
+      const ca=(k/7)*Math.PI*2;
+      const ch=new THREE.Mesh(new THREE.SphereGeometry(.14,16,16),cherryMat);
+      ch.position.set(Math.cos(ca)*.88,1.45,Math.sin(ca)*.88);FG.add(ch);
+      const st=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.18,8),stemMat);
+      st.position.set(Math.cos(ca)*.88,1.62,Math.sin(ca)*.88);
+      st.rotation.z=.28+Math.random()*.2;FG.add(st);
+    }
+    const cc=new THREE.Mesh(new THREE.SphereGeometry(.16,16,16),cherryMat);
+    cc.position.set(0,1.47,0);FG.add(cc);
+  }
+
+  G.add(FG);
+  G.scale.set(0.001,0.001,0.001);
+  scene.add(G);
+  groups.push({G,FG});
+});
+
+// ── ENTER ──
+let entered=false;
+function enterExperience(){
+  entered=true;
+  const loading=document.getElementById('loading');
+  loading.classList.add('out');
+  setTimeout(()=>loading.style.display='none',1800);
+  ['hdr','menu','info'].forEach(id=>document.getElementById(id).classList.add('vis'));
+  groups.forEach(({G},i)=>gsap.to(G.scale,{x:1,y:1,z:1,duration:1.65,delay:.3+i*.1,ease:'elastic.out(1,0.55)'}));
+}
+let ac=setInterval(()=>{if(prog>=100){clearInterval(ac);setTimeout(enterExperience,500);}},80);
+
+// ── RENDER LOOP ──
+const clock=new THREE.Clock();
+let camX=0,camY=3.2,camZ=13;
+
+function animate(){
+  requestAnimationFrame(animate);
+  const t=clock.getElapsedTime();
+
+  smoothMX+=(mouseNormX-smoothMX)*.055;
+  smoothMY+=(mouseNormY-smoothMY)*.055;
+
+  camX+=(active*7.5-camX)*.07;
+  camY+=(3.2+smoothMY*1.7-camY)*.042;
+  camZ+=(13-Math.abs(smoothMY)*.8-camZ)*.042;
+  camera.position.set(camX,camY,camZ);
+  camera.lookAt(camX+smoothMX*2.4,.5+smoothMY*.25,0);
+
+  keyLight.position.x=camX+3;
+  keyLight.target.position.set(camX,0,0);
+  keyLight.target.updateMatrixWorld();
+  rimLight.position.x=camX-5;
+  bounceLight.position.x=camX;
+
+  groups.forEach(({G,FG},i)=>{
+    const scaleMod=Math.max(.44,1-Math.abs(i-active)*.19);
+    if(entered&&G.scale.x>.1&&!gsap.isTweening(G.scale))G.scale.setScalar(scaleMod);
+    G.position.y=Math.sin(t*1.55+i*1.25)*.07;
+    FG.rotation.y+=.0016;
+    if(i===active){
+      FG.rotation.x+=((-smoothMY*.16)-FG.rotation.x)*.07;
+      FG.rotation.z+=((smoothMX*.045)-FG.rotation.z)*.07;
+      FG.rotation.y+=smoothMX*.018;
+    } else {
+      FG.rotation.x*=.91;FG.rotation.z*=.91;
+    }
+  });
+
+  renderer.render(scene,camera);
+}
+animate();
+
+window.addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
+});
+</script>
+</body>
+</html>
